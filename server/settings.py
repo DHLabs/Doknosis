@@ -17,11 +17,10 @@ class Config( object ):
 
 class Dev( Config ):
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = 'mysql+mysqldb://%s:%s@%s/%s?charset=utf8' % ( 'athlabs_server', 'soopahserver', 'mysql.athlabs.com', 'ctp_dev' )
-    #SQLALCHEMY_DATABASE_URI = 'sqlite:///../tmp/dev.db'
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///../tmp/dev.db'
 
 class Production( Config ):
-    SQLALCHEMY_DATABASE_URI = 'mysql+mysqldb://%s:%s@%s/%s?charset=utf8' % ( 'athlabs_server', 'soopahserver', 'mysql.athlabs.com', 'ctp_dev' )
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///../tmp/dev.db'
     
 class Testing( Config ):
     TESTING = True

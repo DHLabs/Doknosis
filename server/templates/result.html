@@ -1,0 +1,27 @@
+<html>
+  <head>
+  	<meta http-equiv="content-type" content="text/html;charset=UTF-8"/> 
+    <link type="text/css" rel="stylesheet" href="/stylesheets/main.css" />
+  </head>
+  
+  <body>
+  
+  	<p> The knowns, ie sex, location, drugs, comorbidities you entered were: <b>{{knowns}}</b></p>
+  	<p> The findings, ie symptoms, you entered were: <b>{{findings}}</b></p>
+  	
+    <h1 align="center"> Diagnosis Results </h1>
+
+	<table border="1" bordercolor="#006600" style="background-color:#FFFFCC" width="400" cellpadding="3" cellspacing="3" align="center">
+	
+	{% for row in ranked_m_solutions_table %}
+  		<tr align ="center">
+			{% for col_val in row %}
+			<td>{{col_val}}</td>
+			{% endfor %}
+		</tr>
+  	{% endfor %}
+  	
+  	</table>
+  		
+  </body>
+</html>
