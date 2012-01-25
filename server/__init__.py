@@ -57,16 +57,19 @@ def get_algorithm_results( knowns, findings, num_solutions=10, num_combinations=
     if algorithm == ALGO_HYBRID_1:
         #If n_disease_combinations is greater than 1, create multiple tables. 
         #Say user chooses 3, then create tables for 1, 2 and 3.
-        for num_combinations in range(1, num_combinations+1):
+        results[ 'greedy' ]  = []
+        results[ 'other' ] = []
+
+        for combinations in range(1, num_combinations+1):
 
             query_time, solutions = run_hybrid_1( knowns, findings, 
-                                                num_combinations=num_combinations,
+                                                num_combinations=combinations,
                                                 num_solutions=num_solutions )
             greedy, other_sols = solutions
 
             results[ 'query_time' ] = ' %0.3f' % ( query_time )
-            results[ 'greedy' ]  = greedy
-            results[ 'other' ] = other_sols
+            results[ 'greedy' ].extend( greedy )
+            results[ 'other' ].extend( other_sols )
 
     # Run Staal's new code
     elif algorithm == ALGO_HYBRID_2:

@@ -140,7 +140,7 @@ def tupleToDict(list_of_tuples):
     diseases_to_prob_dict = {}
     for tuple in list_of_tuples:
         val = tuple[0]
-        disease_names = ','.join( tuple[1] )
+        disease_names = ', '.join( tuple[1] )
         diseases_to_prob_dict[ disease_names ] = val
 
     return diseases_to_prob_dict
@@ -183,7 +183,7 @@ def run_hybrid_1( knowns, findings, num_solutions=10, num_combinations=1 ):
     sizeN_sol = bruteN( disease_map, measure, num_combinations )
 
     sizeN_sol_dict = tupleToDict( sizeN_sol )
-    
+
     ranked_sizeN_m_sol = rank_probs( sizeN_sol_dict, num_solutions )
     
     results =  ( greedy_sol, ranked_sizeN_m_sol )
