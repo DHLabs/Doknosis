@@ -1,12 +1,11 @@
-from flask import Flask, request, render_template
-
-import calc_probabilityv12
-import doknosis
-import pickle
-import time
-import parseFile
 import json
-from constants import age_dict, sex_dict, country_dict
+import time
+
+# import calc_probabilityv12
+# import doknosis
+# import parseFile
+
+from flask import Flask, request, render_template
 
 # Import API functions
 from server.api.findings import findings_api
@@ -118,5 +117,5 @@ def get_result():
 
 @MAIN.route( '/' )
 @MAIN.route( '/index.html' )
-def test():
+def index():
     return render_template( 'index.html' )

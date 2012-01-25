@@ -1,8 +1,11 @@
 import sys
+import time
 
 from operator import or_,itemgetter
 from heapq import nlargest
+
 from server.db import Disease, Finding
+from sqlalchemy.orm import joinedload
 
 def combinations(iterable, r):
     # combinations('ABCD', 2) --> AB AC AD BC BD CD
@@ -160,8 +163,10 @@ def run_hybrid_1( knowns, findings, num_solutions=10, num_combinations=1 ):
     diseases_list = None
 
     # Filter by knowns
-    diseases_list = Disease.query.filter( Disease.findings.any( Finding.id.in_( findings ) ) ).all()
-    
+    t1 = time.time()
+    diseases_list = Disease.query.options( joinedload( Disease.findings ) ).filter( Disease.findings.any( Finding.id.in_( findings ) ) ).all()
+    print 'DB QUERY: %0.3fms' % ( ( time.time() - t1 ) * 1000.0 )
+
     findings = set( findings )
 
     # Convert from list to hashmap

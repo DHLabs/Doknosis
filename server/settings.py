@@ -4,6 +4,12 @@ settings.py
 Contains the settings for the Flask application. 
 See http://flask.pocoo.org/docs/config/ for more details. 
 '''
+
+DB_USER = 'athlabs_server'
+DB_PASS = 'soopahserver'
+DB_HOST = 'mysql.athlabs.com'
+DB_NAME = 'doknosis'
+
 class Config( object ):
     DEBUG = False
     TESTING = False
@@ -17,10 +23,12 @@ class Config( object ):
 
 class Dev( Config ):
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///../tmp/dev.db'
+    #SQLALCHEMY_DATABASE_URI = 'sqlite:///../tmp/dev.db'
+    SQLALCHEMY_DATABASE_URI = 'mysql+mysqldb://%s:%s@%s/%s?charset=utf8' % ( DB_USER, DB_PASS, DB_HOST, DB_NAME )
 
 class Production( Config ):
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///../tmp/dev.db'
+    #SQLALCHEMY_DATABASE_URI = 'sqlite:///../tmp/dev.db'
+    SQLALCHEMY_DATABASE_URI = 'mysql+mysqldb://%s:%s@%s/%s?charset=utf8' % ( DB_USER, DB_PASS, DB_HOST, DB_NAME )
     
 class Testing( Config ):
     TESTING = True
