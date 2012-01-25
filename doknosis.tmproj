@@ -91,20 +91,6 @@
 			<key>firstVisibleLine</key>
 			<integer>300</integer>
 		</dict>
-		<key>server/templates/diagnosis_simple.html</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>0</integer>
-				<key>line</key>
-				<integer>270</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>259</integer>
-		</dict>
 		<key>server/templates/index.html</key>
 		<dict>
 			<key>caret</key>
@@ -127,7 +113,6 @@
 		<string>server/settings.py</string>
 		<string>server/db.py</string>
 		<string>server/templates/index.html</string>
-		<string>server/templates/diagnosis_simple.html</string>
 		<string>server/api/findings.py</string>
 	</array>
 	<key>showFileHierarchyDrawer</key>
