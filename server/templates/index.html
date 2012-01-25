@@ -31,6 +31,9 @@
  				return;
  			}
 
+ 			$( '#results' ).hide();
+ 			$( '#results-list' ).html( '' );
+
 	 		$( '#dokbot-waiting' ).fadeIn( 'fast', function() {
 
 	 			var params = { 'findings': window.symptoms.join( ',' ) };
@@ -41,16 +44,21 @@
 	 			$.getJSON( '/diagnosis_result', params, function( data ) {
 	 				
 	 				if( data.success ) {
-		 				$( '#results-list' ).html( '' );
-		 				$( '#results-list ' ).append( '<div><strong>Most Likely:</strong> ' + data.greedy + '</div>' );
+	 					$( '#query-time' ).html( 'DB QUERY TIME: ' + data.query_time );
 
+		 				$( '#results-list ' ).append( '<div style="margin:16px 0;"><strong>Most Likely:</strong> ' + data.greedy + '</div>' );
+
+		 				var html = '<table><tr><th>Name</th><th>Score</th></tr>';
 		 				for( var i = 0; i < data.other.length; i++ ) {
-		 					$( '#results-list' ).append( '<div>' + data.other[i] + '</div>' );	
+		 					html += '<tr><td>' + data.other[i][0] + '</td><td>' + data.other[i][1] + '</td></tr>'	
 		 				}
+		 				html += '</table>'
+		 				$( '#results-list' ).append( html );
 
 		 				$( '#dokbot-waiting' ).fadeOut( 'fast', function() {
 		 					$( '#results' ).fadeIn();	
 		 				} );
+
 		 			} else {
 		 				$( '#dokbot-waiting' ).hide();
 		 			}
@@ -168,6 +176,9 @@
 								<option value="3">Bayesian</option> 
 							</select>
 						</div>
+					</div>
+					<div>
+						<div id='query-time' style='color:#AAA;font-size:10px;'></div>
 					</div>
 				</div>
 			</div>

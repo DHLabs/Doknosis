@@ -59,10 +59,12 @@ def get_algorithm_results( knowns, findings, num_solutions=10, num_combinations=
         #Say user chooses 3, then create tables for 1, 2 and 3.
         for num_combinations in range(1, num_combinations+1):
 
-            greedy, other_sols = run_hybrid_1( knowns, findings, 
+            query_time, solutions = run_hybrid_1( knowns, findings, 
                                                 num_combinations=num_combinations,
                                                 num_solutions=num_solutions )
+            greedy, other_sols = solutions
 
+            results[ 'query_time' ] = ' %0.3f' % ( query_time )
             results[ 'greedy' ]  = greedy
             results[ 'other' ] = other_sols
 

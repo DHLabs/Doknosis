@@ -138,16 +138,11 @@ def tupleToDict(list_of_tuples):
     """
     
     diseases_to_prob_dict = {}
-    
     for tuple in list_of_tuples:
         val = tuple[0]
-        tupleDiseaseNames = tuple[1]
-        name = ""
-        for diseaseName in tupleDiseaseNames:
-            name = name + " " + diseaseName + ", " #more like a string to string method, will need to be changed when want to pretty up printing of diseases in table
-        
-        diseases_to_prob_dict[name] = val
-         
+        disease_names = ','.join( tuple[1] )
+        diseases_to_prob_dict[ disease_names ] = val
+
     return diseases_to_prob_dict
 
 def run_hybrid_1( knowns, findings, num_solutions=10, num_combinations=1 ):
@@ -165,7 +160,7 @@ def run_hybrid_1( knowns, findings, num_solutions=10, num_combinations=1 ):
     # Filter by knowns
     t1 = time.time()
     diseases_list = Disease.query.options( joinedload( Disease.findings ) ).filter( Disease.findings.any( Finding.id.in_( findings ) ) ).all()
-    print 'DB QUERY: %0.3fms' % ( ( time.time() - t1 ) * 1000.0 )
+    query_time = ( time.time() - t1 ) * 1000.0
 
     findings = set( findings )
 
@@ -186,14 +181,14 @@ def run_hybrid_1( knowns, findings, num_solutions=10, num_combinations=1 ):
         greedy_sol = "No greedy solution"
         
     sizeN_sol = bruteN( disease_map, measure, num_combinations )
-    
+
     sizeN_sol_dict = tupleToDict( sizeN_sol )
     
     ranked_sizeN_m_sol = rank_probs( sizeN_sol_dict, num_solutions )
     
     results =  ( greedy_sol, ranked_sizeN_m_sol )
 
-    return results
+    return ( query_time, results )
 
 def run_hybrid_2( knowns, findings, num_solutions=10, num_combinations=1 ):
     # Filter by knowns
