@@ -1,18 +1,24 @@
-
 from flask import Flask, request, render_template
 
 import calc_probabilityv12
 import doknosis
 import pickle
 import time
-
+import parseFile
+import json
 from constants import age_dict, sex_dict, country_dict
 
 # Import API functions
 from server.api.findings import findings_api
 
+from server.algos import run_hybrid_1, run_hybrid_2, run_bayesian
 from server.cache import cache
-from server.db import db
+from server.db import db, Disease
+
+# Algorithm choice constants
+ALGO_HYBRID_1 = 1
+ALGO_HYBRID_2 = 2
+ALGO_BAYESIAN = 3
 
 # Flask components
 MAIN  = Flask( __name__ )
@@ -44,122 +50,84 @@ def create_app( settings = 'server.settings.Dev' ):
     
     # Register apis
     MAIN.register_blueprint( findings_api, url_prefix='/api' )
-    # MAIN.register_blueprint( tag_api,    url_prefix='/api' )
     
     return MAIN
 
-def get_algorithm_results( Knowns, Findings ):
-    """
-    Has three inputs:
-    1. choice_of_algorithms: What algorithm to choose to run
-    2. m_solutions: How many solutions (m) to print in our list
-    3. n_disease_combinations: How many disease combinations (n) to account for
-    4. Knowns: What are demographics or key findings that this disease must be associated with
-    5. Findings: What are demographics that we want to associate with our disease
-    """
+def get_algorithm_results( knowns, findings, num_solutions=10, num_combinations=1, algorithm=ALGO_HYBRID_1 ):
+    '''
+    Required:
+        knowns           - What are demographics or key findings that this disease must be associated with
+        findings         - What are demographics that we want to associate with our disease
 
-    m_solutions = int( request.args.get(buttons['number_of_solutions']))
-    n_disease_combinations = int( request.args.get(buttons['number_of_disease_combinations'] ) )
-    choice_of_algorithms = request.args.get( buttons['choice_of_algorithms'] )
+    Optional:
+        num_solutions    - How many solutions (m) to print in our list [ default: 10 ]
+        num_combinations - How many disease combinations (n) to account for [ default: 1 ]
+        algorithm        - What algorithm to choose to run [ default: ALGO_HYBRID_1 ]
+    '''
 
-    table = [['m solutions ' + str(m_solutions) + ' n_disease_combinations: ' + str(n_disease_combinations)]]
-    table = [[]]
-    if(choice_of_algorithms == '1'):
-     #Run the current greedy Staal algorithm
+    results = {}
 
-     #If n_disease_combinations is greater than 1, create multiple tables. 
-     #Say user chooses 3, then create tables for 1, 2 and 3.
-     for n_disease_combo in range(1, n_disease_combinations+1):
+    # Run the current greedy Staal algorithm    
+    if algorithm == ALGO_HYBRID_1:
+        #If n_disease_combinations is greater than 1, create multiple tables. 
+        #Say user chooses 3, then create tables for 1, 2 and 3.
+        for num_combinations in range(1, num_combinations+1):
 
-         result = calc_probabilityv12.runDiagnosis2(Knowns, Findings, n_disease_combo, m_solutions)
+            greedy, other_sols = run_hybrid_1( knowns, findings, 
+                                                num_combinations=num_combinations,
+                                                num_solutions=num_solutions )
 
-         row1 = [['Greedy solution', str(result[0])]]
-         row2 = [[' - ', '  - ']]
-         row3 = [['Ranked solutions for ' + str(n_disease_combo) + " diseases", 'Score']]
-         table += row1 + row2 + row3
+            results[ 'greedy' ]  = greedy
+            results[ 'other' ] = other_sols
 
-         solutions = result[1]
+    # Run Staal's new code
+    elif algorithm == ALGO_HYBRID_2:
 
-         for solution in solutions:
-             table = table + [solution]
+        #There can be multiple solutions to this particular query
+        greedy, other_sols = run_hybrid_2( knowns, findings,
+                                            num_combinations=num_combinations,
+                                            num_solutions=num_solutions )
 
-    elif(choice_of_algorithms == '2'):
-     #Run Staal's new code
-     table = table + [['Staals new code']]
+        results[ 'greedy' ]  = greedy
+        results[ 'other' ] = other_sols
+            
+    # Run Eli's algorithm            
+    elif algorithm == ALGO_BAYESIAN:
 
-     #There can be multiple solutions to this particular query
-     solution_and_values_list = doknosis.runDiagnosis(Findings)
+        greedy, other_sols = run_bayesian( knowns, findings,
+                                            num_combinations=num_combinations,
+                                            num_solutions=num_solutions )
 
-     row0 = [['', 'Percent Covered Each Finding']]
-     row1 = [['New greedy solution'] + Findings]
+        results[ 'greedy' ]  = greedy
+        results[ 'other' ] = other_sols
 
-     table = row0 + row1
+    return results
 
-     for solution in solution_and_values_list:
-         table = table + [solution]
-
-    elif(choice_of_algorithms == '3'):
-     #Run Eli's algorithm
-     ranked_probs = calc_probabilityv12.runDiagnosis(Knowns, Findings)
-     row1 = [['Disease', 'Probability']]
-     table = row1
-
-     for ranked_prob in ranked_probs:
-         table = table + [ranked_prob]
-    else:
-     #No idea what the user has inputted somehow
-     table = table + [['No algorithm chosen']]
-
-    return table
-
-@MAIN.route( '/diagnosis_result' )
+@MAIN.route( '/diagnosis_result', methods=[ 'GET' ] )
 #@print_timing #( index took 793.682 ms )
-def result():
-    # Get the knowns that the user has inputted
-    Knowns = []
-    tmp = request.args.get( 'required_textarea' ).split( ',' )
-    for known in tmp:
-        if( len( known ) != 0 ):
-            Knowns.append( str( known ).strip() )
-        
-    print 'Knowns: %s' % ( Knowns )
-    
-    Findings = []
-    tmp = request.args.get( 'hello' ).split( ',' )
-    for finding in tmp:
-        if( len( finding ) != 0 ):
-            Findings.append( str( finding ).strip() )
-    
-    print 'Findings: %s' % ( Findings )
+def get_result():
+    # Symptoms are passed in as a comma-separated value list of IDs
+    # e.g symptoms=1,2,3,4
 
-    # #Allows this current version of our disease calculator to have the updated dictionaries
-    # self.update_dictionaries()
-    diseasesBytes = cache.get("diseases")
-    r_bytes = cache.get("R")
-    or_g_bytes = cache.get("OR_G")
-    prevalence_bytes = cache.get("prevalence_G")
-        
-    if(diseasesBytes is not None):
-        useDiseases = pickle.loads(diseasesBytes)
-        R = pickle.loads(r_bytes)
-        OR_G = pickle.loads(or_g_bytes)
-        prevalence_G = pickle.loads(prevalence_bytes) 
-        calc_probabilityv12.setDictionaries(R, OR_G, prevalence_G)
-        doknosis.setDictionaries(OR_G)
-        
-    # Use a switch on which algorithm to use
-    # Each algorithm should return a ranked set of solutions and that is all
-    ranked_m_solutions_table = get_algorithm_results(Knowns, Findings)
-    
-    template_values = {
-        'findings': "".join([finding + ", " for finding in Findings]),
-        'knowns' : "".join([known + ", " for known in Knowns]),
-        'ranked_m_solutions_table' : ranked_m_solutions_table
-    }
-    
-    #self.response.headers['Content-Type'] = "text/html; charset=utf-8"
-    return render_template( 'result.html', **template_values )
-    # return '<html>boom</html>'
+    if request.args.get( 'findings' ) is None:
+        return json.dumps( { 'success': False } )
+
+    findings         = request.args.get( 'findings' ).split( ',' )
+    findings         = [ int( x ) for x in findings ]
+
+    num_solutions    = int( request.args.get( 'num_solutions' ) )
+    num_combinations = int( request.args.get( 'num_combinations' ) )
+    algorithm        = int( request.args.get( 'algorithm' ) )
+
+    # TODO: Support other algorithms
+    algorithm = 1
+
+    results = get_algorithm_results( None, findings, 
+                                    num_solutions=num_solutions, 
+                                    num_combinations=num_combinations,
+                                    algorithm=algorithm )
+    results[ 'success' ] = True
+    return json.dumps( results )
 
 @MAIN.route( '/test' )
 def test():
@@ -181,11 +149,16 @@ def index():
     '''    
     diagnosis_result_path = "/diagnosis_result"
     
-    # tbl = parseFile.createCSVTable()
-    # diseasesList = parseFile.createDiseaseList(tbl)
-    # R_dict = parseFile.create_R_dictionary(diseasesList)
+    diseases = Disease.query.limit(1).one()
+    print set( diseases.findings )
+    #tbl = parseFile.createCSVTable()
+    #findings,diseasesList = parseFile.createDiseaseList(tbl)
+    #R_dict = parseFile.create_R_dictionary(diseasesList)
+    #print R_dict[ 'Leprosy' ]
     # OR_G_dict = parseFile.create_OR_dictionary(diseasesList)
+    # print OR_G_dict['Leprosy']
     # prevalence_G_dict = parseFile.create_prevalence_G_dictionary(diseasesList)
+    # print prevalence_G_dict[ 'Leprosy' ]
     # 
     # #Cache all these results
     # cache.set( 'diseases', pickle.dumps(diseasesList))

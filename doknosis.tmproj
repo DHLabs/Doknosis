@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Documents/Current Work/Research/tricorder/doknosis.py</string>
+	<string>server/db.py</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -21,85 +21,114 @@
 	<integer>200</integer>
 	<key>metaData</key>
 	<dict>
-		<key>Documents/Current Work/Research/tricorder/Constants.py</key>
+		<key>server/__init__.py</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>22</integer>
 				<key>line</key>
-				<integer>0</integer>
+				<integer>29</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>0</integer>
 		</dict>
-		<key>Documents/Current Work/Research/tricorder/ICD10.csv</key>
+		<key>server/api/findings.py</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>38</integer>
 				<key>line</key>
-				<integer>0</integer>
+				<integer>37</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>0</integer>
 		</dict>
-		<key>Documents/Current Work/Research/tricorder/doknosis.py</key>
+		<key>server/db.py</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>10</integer>
+				<integer>40</integer>
 				<key>line</key>
-				<integer>427</integer>
+				<integer>8</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>405</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>4</integer>
-				<key>line</key>
-				<integer>427</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>16</integer>
-				<key>line</key>
-				<integer>427</integer>
-			</dict>
+			<integer>0</integer>
 		</dict>
-		<key>Documents/Current Work/Research/tricorder/doknosisparser.py</key>
+		<key>server/settings.py</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>25</integer>
+				<integer>15</integer>
 				<key>line</key>
-				<integer>230</integer>
+				<integer>8</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>182</integer>
+			<integer>0</integer>
+		</dict>
+		<key>server/static/css/bootstrap.css</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>190</integer>
+				<key>line</key>
+				<integer>355</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>300</integer>
+		</dict>
+		<key>server/templates/diagnosis_simple.html</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>270</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>259</integer>
+		</dict>
+		<key>server/templates/index.html</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>3</integer>
+				<key>line</key>
+				<integer>85</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>50</integer>
 		</dict>
 	</dict>
 	<key>openDocuments</key>
 	<array>
-		<string>Documents/Current Work/Research/tricorder/Constants.py</string>
-		<string>Documents/Current Work/Research/tricorder/doknosis.py</string>
-		<string>Documents/Current Work/Research/tricorder/doknosisparser.py</string>
-		<string>Documents/Current Work/Research/tricorder/ICD10.csv</string>
+		<string>server/__init__.py</string>
+		<string>server/static/css/bootstrap.css</string>
+		<string>server/settings.py</string>
+		<string>server/db.py</string>
+		<string>server/templates/index.html</string>
+		<string>server/templates/diagnosis_simple.html</string>
+		<string>server/api/findings.py</string>
 	</array>
 	<key>showFileHierarchyDrawer</key>
 	<false/>
@@ -112,10 +141,33 @@
 			<key>isExpanded</key>
 			<true/>
 			<key>subItems</key>
-			<dict/>
+			<dict>
+				<key>server</key>
+				<dict>
+					<key>isExpanded</key>
+					<true/>
+					<key>subItems</key>
+					<dict>
+						<key>api</key>
+						<dict>
+							<key>isExpanded</key>
+							<true/>
+							<key>subItems</key>
+							<dict/>
+						</dict>
+						<key>templates</key>
+						<dict>
+							<key>isExpanded</key>
+							<true/>
+							<key>subItems</key>
+							<dict/>
+						</dict>
+					</dict>
+				</dict>
+			</dict>
 		</dict>
 	</dict>
 	<key>windowFrame</key>
-	<string>{{7, 43}, {1333, 969}}</string>
+	<string>{{310, 26}, {1333, 969}}</string>
 </dict>
 </plist>

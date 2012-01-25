@@ -511,6 +511,7 @@ def runDiagnosis2(Knowns, Findings, number_of_disease_combinations, m_solutions)
     knowns = Knowns
 
     findings = set(findings)
+    print findings
     #TODO maybe don't reduce
     G = R
     G = reduce_dictionary2(R, knowns)

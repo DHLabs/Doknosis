@@ -6,87 +6,79 @@
 	
 	<link href='http://fonts.googleapis.com/css?family=Droid+Serif' rel='stylesheet' type='text/css'>
 	<link rel="stylesheet" href="/static/css/bootstrap.css">
+	<link rel='stylesheet' href='/static/css/layout.css'>
+	<link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery-ui.css" rel="stylesheet" type="text/css">
+
 	<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-	
-	<link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery-ui.css" rel="stylesheet" type="text/css"/>
-	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.5/jquery.min.js"></script>
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7/jquery.min.js"></script>
 	<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.min.js"></script>
-	
- 	<style type="text/css">
-	  /* Override some defaults */
-	  html, body {
-		background-color: #eee;
-	  }
-	  body {
-		padding-top: 40px; /* 40px to make the container go all the way to the bottom of the topbar */
-	  }
-	  .container > footer p {
-		text-align: center; /* center align it with the container */
-	  }
-	  .container {
-		width: 820px; /* downsize our container to make the content feel a bit tighter and more cohesive. NOTE: this removes two full columns from the grid, meaning you only go to 14 columns and not 16. */
-	  }
 
-	  /* The white background content wrapper */
-	  .content {
-		background-color: #fff;
-		padding: 20px;
-		margin: 0 -20px; /* negative indent the amount of the padding to maintain the grid system */
-		-webkit-border-radius: 0 0 6px 6px;
-		   -moz-border-radius: 0 0 6px 6px;
-				border-radius: 0 0 6px 6px;
-		-webkit-box-shadow: 0 1px 2px rgba(0,0,0,.15);
-		   -moz-box-shadow: 0 1px 2px rgba(0,0,0,.15);
-				box-shadow: 0 1px 2px rgba(0,0,0,.15);
-	  }
-
-	  /* Page header tweaks */
-	  .page-header {
-		background-color: #f5f5f5;
-		padding: 20px 20px 10px;
-		margin: -20px -20px 20px;
-	  }
-
-	  /* Styles you shouldn't keep as they are for displaying this base example only */
-	  .content .span10,
-	  .content .span4 {
-		min-height: 500px;
-	  }
-	  /* Give a quick and non-cross-browser friendly divider */
-	  .content .span4 {
-		margin-left: 0;
-		padding-left: 19px;
-		border-left: 1px solid #eee;
-	  }
-
-	  .topbar .btn {
-		border: 0;
-	  }
-		.label {
-			float:left;
-			margin-right:8px;
-			margin-bottom:8px;
-			font-weight:lighter;
-			color:#000;
-		}
-		
-		.label > span {
-			padding:8px;
-		}
-		
-		.label > .rm {
-			border-left: 1px solid #FFF;
-			color:#FFF;
-			text-decoration:none;
-			cursor: pointer;
-		}
-		
-		#advanced_options div {
-			margin-bottom:16px;
-		}
-    </style>	
 	 <script type="text/javascript">
+	 	function clear_all() {
+	 		console.log( 'clearing' );
+	 		
+	 		// Remove all symptons
+	 		window.symptoms = []
+	 		$( '.rm' ).fadeOut( 'fast', function() { $( this.parentNode ). remove() } );
+	 		$( '#dokbot-waiting' ).hide();
+	 		$( '#results' ).hide();
+	 	}
+
+	 	function get_diagnosis() {
+
+ 			if( window.symptoms.length == 0 ) {
+ 				alert( 'Please enter some symptoms first!' );
+ 				return;
+ 			}
+
+	 		$( '#dokbot-waiting' ).fadeIn( 'fast', function() {
+
+	 			var params = { 'findings': window.symptoms.join( ',' ) };
+	 			params[ 'num_solutions' ] = $( '#num_solutions' ).val();
+	 			params[ 'num_combinations' ] = $( '#num_combinations' ).val();
+	 			params[ 'algorithm' ] = $( '#algorithm' ).val();
+
+	 			$.getJSON( '/diagnosis_result', params, function( data ) {
+	 				
+	 				if( data.success ) {
+		 				$( '#results-list' ).html( '' );
+		 				$( '#results-list ' ).append( '<div><strong>Most Likely:</strong> ' + data.greedy + '</div>' );
+
+		 				for( var i = 0; i < data.other.length; i++ ) {
+		 					$( '#results-list' ).append( '<div>' + data.other[i] + '</div>' );	
+		 				}
+
+		 				$( '#dokbot-waiting' ).fadeOut( 'fast', function() {
+		 					$( '#results' ).fadeIn();	
+		 				} );
+		 			} else {
+		 				$( '#dokbot-waiting' ).hide();
+		 			}
+
+	 			});
+	 		});
+	 	}
+
 		$( function() {
+
+			// List of symptons to submit
+			window.symptoms = [];
+
+			// Remove symptom from list
+			$( document ).on( 'click', '.rm', function() {
+				var id = $( this ).data( 'sid' );
+
+				// Loop through and attempt to find matching id
+				for( var i = 0; i < window.symptoms.length; i++ ) {
+					if( window.symptoms[i] === id ) {
+						// Remove from array
+						window.symptoms.splice( i, 1 );
+					}
+				}
+
+				$( this.parentNode ).fadeOut( 'fast', function() { $( this ).remove(); } );
+			});
+
 			$( "#symptoms" ).autocomplete({
 				source: '/api/finding/autocomplete',
 				select: function(event, ui) {
@@ -94,7 +86,10 @@
 			    	ui.item.value = '';
 			
 					$( '#symptoms-list > .help-block' ).remove();
-					$( '#symptoms-list' ).append( '<span class="label"><span>' + text + '</span><span class="rm">x</span></span>' );
+					$( '#symptoms-list' ).append( '<span class="label"><span>' + text + 
+						'</span><span data-sid="' + ui.item.id + '" class="rm">x</span></span>' );
+
+					window.symptoms.push( ui.item.id );
 				}
 			});
 	 	});
@@ -126,9 +121,7 @@
 			</div>
 			<div class="row">
 				<div class="span10">
-					<h2>Demographics &amp; Symptoms</h2>
-					<div></div>
-					<h3>Symptoms</h3>
+					<h2>Symptoms</h2>
 					<div style='padding-right:16px;'>
 						<div class='clearfix'>
 							<div class='input'><input type='text' size='60' class='xlarge' id='symptoms' placeholder='Type symptoms here'></div>
@@ -137,13 +130,21 @@
 							<span class='help-block' style='text-align:center;margin-bottom:8px;'>No symptoms entered</span>
 						</div>
 					</div>
-				</div>
+					<div id='dokbot-waiting' style='text-align:center;display:none;'>
+						<img src='/static/img/dokbot.png'><h2>Getting your results...</h2>
+					</div>
+					<div id='results' style='display:none;'>
+						<h2>Your Diagnosis</h2>
+						<div id='results-list'>
+						</div>
+					</div>
+				</div>			
 				<div class="span4 form-stacked">
 					<h3>Advanced Options</h3>
 					<div id='advanced_options'>
 						<div> 
 							<label for='num_solutions'>Solutions</label>
-							<select name="num_solutions"> 
+							<select id="num_solutions"> 
 								<option value="10">10</option> 
 								<option value="1">1</option> 
 								<option value="5">5</option> 
@@ -152,7 +153,7 @@
 						</div>
 						<div> 
 							<label>Disease Combinations</label>
-							<select name="num_combinations"> 
+							<select id="num_combinations"> 
 								<option value="1">1</option> 
 								<option value="2">2</option> 
 								<option value="3">3</option> 
@@ -161,13 +162,10 @@
 						</div>
 						<div> 
 							<label>Algorithm</label>
-							<select name="algorithm" class="drop_down"> 
+							<select id="algorithm" class="drop_down"> 
 								<option value="1">Hybrid 1</option> 
-
 								<option value="2">Hybrid 2</option> 
-
 								<option value="3">Bayesian</option> 
-
 							</select>
 						</div>
 					</div>
@@ -175,11 +173,11 @@
 			</div>
 			<div class='row'>
 				<div class='span16'>
-					<button type='submit' class='btn primary large'>Diagnose</button>
+					<button onclick='get_diagnosis()' type='submit' class='btn primary large'>Diagnose</button>
+					<button onclick='clear_all()' type='submit' class='btn large'>Start Over</button>
 				</div>
-			</div>			
+			</div>		
 		</div>
-		<footer> <p>&copy; Company 2011</p> </footer>
-	</div> <!-- /container -->
+	</div>
 </body>
 </html>
