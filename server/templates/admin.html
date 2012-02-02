@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang='en'>
+<head>
+	<meta charset='utf-8'>
+	<title>Doknosis</title>
+	
+	<link href='http://fonts.googleapis.com/css?family=Droid+Serif' rel='stylesheet' type='text/css'>
+	<link rel="stylesheet" href="/static/css/bootstrap.css">
+	<link rel='stylesheet' href='/static/css/layout.css'>
+	<link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery-ui.css" rel="stylesheet" type="text/css">
+
+	<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7/jquery.min.js"></script>
+	<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.min.js"></script>
+	<script type='text/javascript'>
+		$( function() {
+			$( "#diseases" ).autocomplete({
+				source: '/admin/disease/autocomplete',
+				select: function(event, ui) {
+			    	window.location = '/admin/edit/' + ui.item.id;
+				}
+			});
+	 	});
+
+	 	function add_disease() {
+	 		var dname = $( '#diseases' ).val();
+	 		if( dname.length == 0 ) {
+	 			alert( 'Please enter a disease name in the textbox first!' );
+	 		} else {
+	 			window.location = '/admin/add/disease?name=' + encodeURIComponent( $( '#diseases' ).val() );
+	 		}
+	 	}
+	 </script>	
+</head>
+
+<body>
+	<div class="topbar">
+		<div class="fill">
+			<div class="container">
+				<a class="brand" href="/admin">Doknosis ADMIN</a>
+			</div>
+		</div>
+	</div>
+	<div class="container">
+		<div class="content">
+			<div class="page-header" style='position:relative;overflow:auto;'>
+				<div style='float:left;'><h1>Diseases</h1></div>
+				<div style='float:left;margin-left:32px;margin-top:6px;'>
+					<input type='text' size='60' class='span9' id='diseases' placeholder='Type disease name to begin search or click add to begin!'>
+				</div>
+				<div style='float:right;margin-top:6px;'>
+					<button class='btn primary' onclick='add_disease();'>Add Disease</button>
+				</div>
+			</div>
+			<div class="row">
+				<div class='span12' id='random' style='font-size:14px;'>
+					<h3>Random List</h3>
+					{% for disease in random_diseases %}
+					<div style='padding:8px 0;'><a href='/admin/edit/{{disease.id}}'>{{disease.name}}</a></div>
+					{% endfor %}
+				</div>
+				<div class='span12' id='edit'>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang='en'>
+<head>
+	<meta charset='utf-8'>
+	<title>Doknosis</title>
+	
+	<link href='http://fonts.googleapis.com/css?family=Droid+Serif' rel='stylesheet' type='text/css'>
+	<link rel="stylesheet" href="/static/css/bootstrap.css">
+	<link rel='stylesheet' href='/static/css/layout.css'>
+	<link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery-ui.css" rel="stylesheet" type="text/css">
+
+	<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7/jquery.min.js"></script>
+	<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.min.js"></script>
+	<script type='text/javascript'>
+		function add_finding() {
+			var name = $( '#finding_name' ).val();
+			var weight = $( '#weight' ).val();
+
+			console.log( name );
+			console.log( weight );
+			$.post( '/admin/add/{{disease.id}}/finding', {'name': name, 'weight': weight}, function(data) {
+				$( '#findings' ).append( '<tr><td>' + name + '</td><td>' + weight + '</td>' +
+							'<td><button class=\'btn danger\' onclick=\'delete_finding(this, ' + 
+							data.id + ');\'>Delete</button></td></tr>' );
+				$( '#finding_name' ).val( '' );
+				$( '#finding_name' ).focus();							
+			}, 'JSON' );
+		}
+
+		function save() {
+			$.get( '/admin/save/disease/{{disease.id}}', { 'name': $( '#disease' ).val() }, function( data ) {
+				alert( 'Successfully saved!' );
+			} );		
+		}
+
+		function delete_finding( ele, fid ) {
+			$.post( '/admin/delete/finding/' + fid, null, function(data) {
+				$( ele.parentNode.parentNode ).fadeOut( 'fast', function() {
+					$( this ).remove();
+				});
+			});			
+		}
+
+		$( function() {
+			$( "#finding_name" ).autocomplete({
+				source: '/api/finding/autocomplete'
+			});			
+	 	});
+	 </script>	
+</head>
+
+<body>
+	<div class="topbar">
+		<div class="fill">
+			<div class="container">
+				<a class="brand" href="/admin">Back to Disease list/search</a>
+			</div>
+		</div>
+	</div>
+	<div class="container">
+		<div class="content">
+			<div class="page-header" style='position:relative;overflow:auto;'>
+				<div style='float:left;'>
+					<input type='text' class='span8' id='disease' value='{{disease.name}}' style='font-size:24px;padding:8px;'>
+				</div>
+				<div style='float:right;margin-top:6px;'>
+					<button class='btn primary' onclick='save();'>Save Changes</button>
+					<a href='/admin/delete/disease/{{disease.id}}'>
+						<button class='btn danger' onclick='delete();'>Delete Disease</button>
+					</a>
+				</div>
+			</div>
+			<div class="row">
+				<div class='span12' id='random'>
+					<h3>Findings for <span style='color:#1691d8;'>{{disease.name}}</span></h3>
+					<table id='findings'>
+						<tr><td>
+							<input type='text' id='finding_name' placeholder='finding name'>
+						</td><td>
+							<select id='weight'>
+								<option value='1.0'>a ( 1.0 )</option>
+								<option value='0.75'>c ( 0.75 )</option>
+								<option value='0.5'>p ( 0.5 )</option>
+								<option value='0.25'>i ( 0.25 )</option>
+								<option value='0.1'>r ( 0.1 )</option>
+								<option value='0'>n ( 0.0 )</option>
+								<option value='0.95'>d ( 0.95 )</option>
+								<option value='0.65'>e ( 0.65 )</option>
+								<option value='0.5'>f ( 0.5 )</option>
+								<option value='0.25'>g ( 0.25 )</option>
+								<option value='0.1'>h ( 0.1 )</option>
+							</select>
+						</td><td>
+							<button class='btn small' onclick='add_finding();'>Add Finding</button>
+						</td></tr>
+						{% for finding in findings %}
+						<tr>
+							<td>{{finding.name}}</td>
+							<td>{{finding.weight}}</td>
+							<td><button class='btn danger' onclick='delete_finding(this, {{finding.id}});'>Delete</button></td>
+						</tr>
+						{% endfor %}
+					</table>
+				</div>
+				<div class='span12' id='edit'>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+</html>

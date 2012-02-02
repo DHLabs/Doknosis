@@ -9,6 +9,7 @@ from flask import Flask, request, render_template
 
 # Import API functions
 from server.api.findings import findings_api
+from server.api.admin import admin_api
 
 from server.algos import run_hybrid_1, run_hybrid_2, run_bayesian
 from server.cache import cache
@@ -36,6 +37,7 @@ def create_app( settings = 'server.settings.Dev' ):
     
     # Register apis
     MAIN.register_blueprint( findings_api, url_prefix='/api' )
+    MAIN.register_blueprint( admin_api, url_prefix='/admin' )
     
     return MAIN
 
