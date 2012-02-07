@@ -8,6 +8,9 @@ class FindingWeight( mongo.Document ):
     name    = mongo.StringField()
     weight  = mongo.FloatField()
 
+    def __init__( self, name, weight, **kwargs ):
+        mongo.Document.__init__( self, name=name, weight=float( weight ), **kwargs )
+
     def to_dict( self ):
         return dict( {'name': self.name, 'weight': self.weight} )
 
