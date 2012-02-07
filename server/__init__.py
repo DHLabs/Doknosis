@@ -71,7 +71,7 @@ def get_algorithm_results( knowns, findings, num_solutions=10, num_combinations=
             greedy, other_sols = solutions
 
             results[ 'query_time' ] = ' %0.3f' % ( query_time )
-            results[ 'greedy' ].extend( greedy )
+            results[ 'greedy' ].append( greedy )
             results[ 'other' ].extend( other_sols )
 
     # Run Staal's new code
