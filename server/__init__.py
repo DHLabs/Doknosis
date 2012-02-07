@@ -69,7 +69,6 @@ def get_algorithm_results( knowns, findings, num_solutions=10, num_combinations=
                                                 num_combinations=combinations,
                                                 num_solutions=num_solutions )
             greedy, other_sols = solutions
-
             results[ 'query_time' ] = ' %0.3f' % ( query_time )
             results[ 'greedy' ].append( greedy )
             results[ 'other' ].extend( other_sols )
