@@ -14,7 +14,7 @@ from server.api.admin import admin_api
 from server.algos import run_hybrid_1, run_hybrid_2, run_bayesian
 from server.cache import cache
 from server.constants import ALGO_BAYESIAN, ALGO_HYBRID_1, ALGO_HYBRID_2
-from server.db import db, Disease
+from server.db import db, mongo, Disease, Finding
 
 # Flask components
 MAIN  = Flask( __name__ )
@@ -34,6 +34,7 @@ def create_app( settings = 'server.settings.Dev' ):
     # Initialize db/cache with app
     db.init_app( MAIN )
     cache.init_app( MAIN )
+    mongo.init_app( MAIN )
     
     # Register apis
     MAIN.register_blueprint( findings_api, url_prefix='/api' )
@@ -105,8 +106,11 @@ def get_result():
     if request.args.get( 'findings' ) is None:
         return json.dumps( { 'success': False } )
 
-    findings         = request.args.get( 'findings' ).split( ',' )
-    findings         = [ int( x ) for x in findings ]
+    findings_list = request.args.get( 'findings' ).split( ',' )
+    findings = []
+    for find in findings_list:
+        tmp = Finding.query.filter( Finding.mongo_id == find ).first()
+        findings.append( tmp.name )
 
     num_solutions    = int( request.args.get( 'num_solutions' ) )
     num_combinations = int( request.args.get( 'num_combinations' ) )

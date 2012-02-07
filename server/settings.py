@@ -13,7 +13,8 @@ DB_NAME = 'doknosis'
 class Config( object ):
     DEBUG = False
     TESTING = False
-    
+    MONGOALCHEMY_DATABASE = 'doknosis'
+
     # Secret generated like so:
     # > import os
     # > os.urandom(24)

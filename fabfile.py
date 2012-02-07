@@ -5,7 +5,7 @@ from fabric.colors import green
 from fabric.contrib.files import exists
 
 from server import create_app
-from server.db import db, Disease, Finding, DiseaseFindings
+from server.db import mongo, Disease, Finding, FindingWeight
 
 import server.parseFile as parseFile
 
@@ -52,12 +52,7 @@ def deploy():
 def init_db():
     '''
     Create tables necessary for this app to work.
-    '''
-    app = create_app()
-    db.init_app( app )
-    with app.test_request_context():
-        db.create_all()
-    
+    '''    
     print green( 'Use \"fab fill_db\" to fill the empty database with data.' )
 
 def fill_db():
@@ -66,8 +61,8 @@ def fill_db():
     '''
     # Create an app context so we can access the database
     app = create_app()
-    db.init_app( app )
-    with app.test_request_context():    
+    mongo.init_app( app )
+    with app.test_request_context():
 
         # Parse CSV file and grab the findings/disease lists
         print green( 'Parsing disease/finding CSV file...' )
@@ -79,33 +74,25 @@ def fill_db():
         finding_assoc = {}
 
         # Add findings to database
-        for obj in findings:
-            fname = obj.strip()
-            finding = Finding( fname )
-            finding_assoc[ fname ] = finding
-            db.session.add( finding )
+        if False:
+            for obj in findings:
+                fname = obj.strip().lower()
+
+                if Finding.query.filter( {'name': fname} ).count() == 0:
+                    finding = Finding( name=fname )
+                    finding.save()
 
         # Add diseases to database
         print green( 'Adding diseases to database...' )
         for obj in diseasesList:
 
-            disease = Disease( obj.name )
+            disease = Disease( name=obj.name )
 
             # Findings are represented as [ Finding name, weight ]
             for fw in obj.findings:
-                fname   = fw[ 0 ]
+                fname   = fw[ 0 ].strip().lower()
                 weight  = float( fw[ 1 ] )
 
-                # Create an association and associate the weight with the finding
-                # for this particular disease
-                association = DiseaseFindings( weight=weight )
-                association.finding = finding_assoc[ fname ]
+                disease.findings.append( FindingWeight( name=fname, weight=weight ) )
 
-                # Add finding to disease
-                disease.findings.append( association )
-
-            db.session.add( disease )
-
-        # Commit changes
-        print green( 'Commiting changes!' )
-        db.session.commit()
+            disease.save()

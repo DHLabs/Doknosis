@@ -4,8 +4,7 @@ import time
 from operator import or_,itemgetter
 from heapq import nlargest
 
-from server.db import Disease, Finding
-from sqlalchemy.orm import joinedload
+from server.db import Disease
 
 def combinations(iterable, r):
     # combinations('ABCD', 2) --> AB AC AD BC BD CD
@@ -159,7 +158,7 @@ def run_hybrid_1( knowns, findings, num_solutions=10, num_combinations=1 ):
 
     # Filter by knowns
     t1 = time.time()
-    diseases_list = Disease.query.options( joinedload( Disease.findings ) ).filter( Disease.findings.any( Finding.id.in_( findings ) ) ).all()
+    diseases_list = Disease.query.filter({ 'findings.name': {'$in': findings }}).all()    
     query_time = ( time.time() - t1 ) * 1000.0
 
     findings = set( findings )
@@ -170,7 +169,7 @@ def run_hybrid_1( knowns, findings, num_solutions=10, num_combinations=1 ):
         disease_map[ disease.name ] = {}
 
         for finding in disease.findings:
-            disease_map[ disease.name ].update( {finding.finding_id: finding.weight} )
+            disease_map[ disease.name ].update( {finding.name: finding.weight} )
 
     measure = createMeasure( disease_map, findings )
     greedy_solution = greedy( disease_map, findings, measure )
@@ -193,7 +192,7 @@ def run_hybrid_1( knowns, findings, num_solutions=10, num_combinations=1 ):
 def run_hybrid_2( knowns, findings, num_solutions=10, num_combinations=1 ):
     # Filter by knowns
     diseases_all  = Disease.query.all()
-    diseases_list = Disease.query.filter( Disease.findings.any( Finding.id.in_( findings ) ) ).all()
+    diseases_list = Disease.query.filter({ 'findings.name': {'$in': findings }}).all()
 
     # Convert from list to hashmap
     for disease in diseases_list:

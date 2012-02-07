@@ -54,9 +54,9 @@
 			</div>
 			<div class="row">
 				<div class='span12' id='random' style='font-size:14px;'>
-					<h3>Random List</h3>
+					<h3>Latest Diseases</h3>
 					{% for disease in random_diseases %}
-					<div style='padding:8px 0;'><a href='/admin/edit/{{disease.id}}'>{{disease.name}}</a></div>
+					<div style='padding:8px 0;'><a href='/admin/edit/{{disease.mongo_id}}'>{{disease.name}}</a></div>
 					{% endfor %}
 				</div>
 				<div class='span12' id='edit'>

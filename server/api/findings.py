@@ -27,13 +27,13 @@ def finding_list():
 def finding_autocomplete():
     term = request.args.get( 'term' )
 
-    findings = Finding.query.filter( Finding.name.contains( term ) ).limit( 10 )
+    findings = Finding.query.filter( {'name': { '$regex': '.*%s.*' % ( term ) } } ).limit( 10 ).all()
 
     # Convert into an JSON object
     json_findings = []
     for finding in findings:
         info = {}
-        info[ 'id' ]    = finding.id
+        info[ 'id' ]    = str( finding.mongo_id )
         info[ 'label' ] = finding.name
         info[ 'value' ] = finding.name
         

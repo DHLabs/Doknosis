@@ -19,23 +19,23 @@
 
 			console.log( name );
 			console.log( weight );
-			$.post( '/admin/add/{{disease.id}}/finding', {'name': name, 'weight': weight}, function(data) {
+			$.post( '/admin/add/{{disease.mongo_id}}/finding', {'name': name, 'weight': weight}, function(data) {
 				$( '#findings' ).append( '<tr><td>' + name + '</td><td>' + weight + '</td>' +
-							'<td><button class=\'btn danger\' onclick=\'delete_finding(this, ' + 
-							data.id + ');\'>Delete</button></td></tr>' );
+							'<td><button class=\'btn danger\' onclick=\'delete_finding(this, "' + 
+							name + '");\'>Delete</button></td></tr>' );
 				$( '#finding_name' ).val( '' );
 				$( '#finding_name' ).focus();							
 			}, 'JSON' );
 		}
 
 		function save() {
-			$.get( '/admin/save/disease/{{disease.id}}', { 'name': $( '#disease' ).val() }, function( data ) {
+			$.get( '/admin/save/disease/{{disease.mongo_id}}', { 'name': $( '#disease' ).val() }, function( data ) {
 				alert( 'Successfully saved!' );
 			} );		
 		}
 
 		function delete_finding( ele, fid ) {
-			$.post( '/admin/delete/finding/' + fid, null, function(data) {
+			$.post( '/admin/delete/{{disease.mongo_id}}/finding/' + encodeURIComponent( fid ), null, function(data) {
 				$( ele.parentNode.parentNode ).fadeOut( 'fast', function() {
 					$( this ).remove();
 				});
@@ -66,7 +66,7 @@
 				</div>
 				<div style='float:right;margin-top:6px;'>
 					<button class='btn primary' onclick='save();'>Save Changes</button>
-					<a href='/admin/delete/disease/{{disease.id}}'>
+					<a href='/admin/delete/disease/{{disease.mongo_id}}'>
 						<button class='btn danger' onclick='delete();'>Delete Disease</button>
 					</a>
 				</div>
@@ -98,7 +98,7 @@
 						<tr>
 							<td>{{finding.name}}</td>
 							<td>{{finding.weight}}</td>
-							<td><button class='btn danger' onclick='delete_finding(this, {{finding.id}});'>Delete</button></td>
+							<td><button class='btn danger' onclick='delete_finding(this, "{{finding.name}}");'>Delete</button></td>
 						</tr>
 						{% endfor %}
 					</table>
