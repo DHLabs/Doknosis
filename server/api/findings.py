@@ -27,7 +27,10 @@ def finding_list():
 def finding_autocomplete():
     term = request.args.get( 'term' )
 
-    findings = Finding.query.filter( {'name': { '$regex': '.*%s.*' % ( term ) } } ).limit( 10 ).all()
+    findings = Finding.query.filter( {'name': { '$regex': '^%s' % ( term ) } } )\
+                .limit( 20 )\
+                .ascending( Finding.name )\
+                .all()
 
     # Convert into an JSON object
     json_findings = []
