@@ -88,7 +88,9 @@ def edit_disease( disease_id ):
 def finding_autocomplete():
     term = request.args.get( 'term' )
 
-    diseases = Disease.query.filter( { 'name': { '$regex': '.*%s.*' % ( term ) } } ).limit( 10 ).ascending( Disease.name ).all()
+    diseases = Disease.query.filter( { 'name': { '$regex': '.*%s.*' % ( term ) } } )\
+                    .ascending( Disease.name )
+                    .all()
 
     # Convert into an JSON object
     json_findings = []
