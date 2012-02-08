@@ -28,6 +28,7 @@ def finding_autocomplete():
     term = request.args.get( 'term' )
 
     findings = Finding.query.filter( {'name': { '$regex': '^%s' % ( term ) } } )\
+                .limit( 25 )\
                 .ascending( Finding.name )\
                 .all()
 
