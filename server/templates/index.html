@@ -91,7 +91,7 @@
 					var text = ui.item.label;
 			    	ui.item.value = '';
 			
-					$( '#symptoms-list > .help-block' ).remove();
+					$( '#symptoms-list > .help-text' ).remove();
 					$( '#symptoms-list' ).append( '<span class="label"><span>' + text + 
 						'</span><span data-sid="' + ui.item.id + '" class="rm">x</span></span>' );
 
@@ -122,18 +122,22 @@
 	</div>
 	<div class="container">
 		<div class="content">
-			<div class="page-header">
-				<h1>Differential Diagnosis</h1>
-			</div>
 			<div class="row">
-				<div class="span10">
-					<h2>Symptoms</h2>
+				<div class="span14">
 					<div style='padding-right:16px;'>
+						<div style='float:right;'>
+							<button onclick='get_diagnosis()' type='submit' class='btn primary'>Diagnose</button>
+							<button onclick='clear_all()' type='submit' class='btn'>Start Over</button>
+						</div>
 						<div class='clearfix'>
-							<div class='input'><input type='text' size='60' class='xlarge' id='symptoms' placeholder='Type symptoms here'></div>
+							<div class='input'>
+								<input type='text' size='90' class='xxlarge' id='symptoms' placeholder='Type symptoms here'>
+							</div>
 						</div>
 						<div class='well' style='margin-top:16px;overflow:auto;padding:8px 8px 0 8px;' id='symptoms-list'>
-							<span class='help-block' style='text-align:center;margin-bottom:8px;'>No symptoms entered</span>
+							<div class='help-text' style='text-align:center;margin-bottom:8px;color:#AAA;'>
+								No symptoms entered
+							</div>
 						</div>
 					</div>
 					<div id='dokbot-waiting' style='text-align:center;display:none;'>
@@ -145,7 +149,7 @@
 						</div>
 					</div>
 				</div>			
-				<div class="span4 form-stacked">
+				<div style='display:none;'>
 					<h3>Advanced Options</h3>
 					<div id='advanced_options'>
 						<div> 
@@ -178,12 +182,6 @@
 					</div>
 				</div>
 			</div>
-			<div class='row'>
-				<div class='span16'>
-					<button onclick='get_diagnosis()' type='submit' class='btn primary large'>Diagnose</button>
-					<button onclick='clear_all()' type='submit' class='btn large'>Start Over</button>
-				</div>
-			</div>		
 		</div>
 	</div>
 </body>

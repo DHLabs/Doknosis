@@ -38,6 +38,9 @@
 		<div class="fill">
 			<div class="container">
 				<a class="brand" href="/admin">Doknosis ADMIN</a>
+				<ul class="nav">
+					<li><a href="/admin/update_db">Download/Update Disease Database</a></li>
+				</ul>
 			</div>
 		</div>
 	</div>
@@ -52,7 +55,7 @@
 					<button class='btn primary' onclick='add_disease();'>Add Disease</button>
 				</div>
 			</div>
-			<div class="row">
+			<div class='row'>
 				<div class='span12' id='random' style='font-size:14px;'>
 					<h3>Latest Diseases</h3>
 					{% for disease in random_diseases %}
