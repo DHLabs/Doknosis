@@ -1,0 +1,10 @@
+Flask==0.8
+Flask-Cache==0.4.0
+Flask-MongoAlchemy==0.5.4
+Flask-SQLAlchemy==0.16
+Jinja2==2.6
+MongoAlchemy==0.12.1
+SQLAlchemy==0.7.7
+Werkzeug==0.8.3
+pymongo==2.2
+wsgiref==0.1.2
