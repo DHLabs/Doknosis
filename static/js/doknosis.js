@@ -25,11 +25,12 @@ get_diagnosis = function() {
   }
   $('#results').hide();
   $('#results-list').html('');
+  toggle_loading();
   if ($('#banner-bar').data('at_top') !== true) {
     $('#banner-bar').data('at_top', true).animate({
       top: '0%',
       marginTop: '+=109'
-    }, 500, toggle_loading);
+    }, 500, null);
   }
   params = {
     findings: window.symptoms.join(','),
