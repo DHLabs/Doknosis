@@ -14,58 +14,69 @@ from server.api.admin import admin_api
 from server.algos import run_hybrid_1, run_hybrid_2, run_bayesian
 from server.cache import cache
 from server.constants import ALGO_BAYESIAN, ALGO_HYBRID_1, ALGO_HYBRID_2
-from server.db import db, mongo, Disease, Finding
+from server.db import db, mongo, Finding
 
 # Flask components
-MAIN  = Flask( __name__ )
+MAIN  = Flask( __name__, static_folder='../static',
+                       template_folder='../templates' )
+
 
 def print_timing(func):
     def wrapper(*arg):
         t1 = time.time()
         res = func(*arg)
         t2 = time.time()
-        print '%s took %0.3f ms' % (func.func_name, (t2-t1)*1000.0)
+        print '%s took %0.3f ms' % (func.func_name, (t2 - t1) * 1000.0)
         return res
     return wrapper
-    
-def create_app( settings = 'server.settings.Dev' ):
+
+
+def create_app( settings='server.settings.Dev' ):
     MAIN.config.from_object( settings )
-    
+
     # Initialize db/cache with app
     db.init_app( MAIN )
     cache.init_app( MAIN )
     mongo.init_app( MAIN )
-    
+
     # Register apis
     MAIN.register_blueprint( findings_api, url_prefix='/api' )
     MAIN.register_blueprint( admin_api, url_prefix='/admin' )
-    
+
     return MAIN
 
-def get_algorithm_results( knowns, findings, num_solutions=10, num_combinations=1, algorithm=ALGO_HYBRID_1 ):
+
+def get_algorithm_results( knowns, findings, num_solutions=10,
+                                             num_combinations=1,
+                                             algorithm=ALGO_HYBRID_1 ):
     '''
     Required:
-        knowns           - What are demographics or key findings that this disease must be associated with
-        findings         - What are demographics that we want to associate with our disease
+        knowns           - What are demographics or key findings that this
+                            disease must be associated with
+        findings         - What are demographics that we want to associate
+                            with our disease
 
     Optional:
-        num_solutions    - How many solutions (m) to print in our list [ default: 10 ]
-        num_combinations - How many disease combinations (n) to account for [ default: 1 ]
-        algorithm        - What algorithm to choose to run [ default: ALGO_HYBRID_1 ]
+        num_solutions    - How many solutions (m) to print in our list
+                            [ default: 10 ]
+        num_combinations - How many disease combinations (n) to account for
+                            [ default: 1 ]
+        algorithm        - What algorithm to choose to run
+                            [ default: ALGO_HYBRID_1 ]
     '''
 
     results = {}
 
-    # Run the current greedy Staal algorithm    
+    # Run the current greedy Staal algorithm
     if algorithm == ALGO_HYBRID_1:
-        #If n_disease_combinations is greater than 1, create multiple tables. 
+        #If n_disease_combinations is greater than 1, create multiple tables.
         #Say user chooses 3, then create tables for 1, 2 and 3.
         results[ 'greedy' ]  = []
         results[ 'other' ] = []
 
-        for combinations in range(1, num_combinations+1):
+        for combinations in range(1, num_combinations + 1):
 
-            query_time, solutions = run_hybrid_1( knowns, findings, 
+            query_time, solutions = run_hybrid_1( knowns, findings,
                                                 num_combinations=combinations,
                                                 num_solutions=num_solutions )
             greedy, other_sols = solutions
@@ -83,8 +94,8 @@ def get_algorithm_results( knowns, findings, num_solutions=10, num_combinations=
 
         results[ 'greedy' ]  = greedy
         results[ 'other' ] = other_sols
-            
-    # Run Eli's algorithm            
+
+    # Run Eli's algorithm
     elif algorithm == ALGO_BAYESIAN:
 
         greedy, other_sols = run_bayesian( knowns, findings,
@@ -96,8 +107,9 @@ def get_algorithm_results( knowns, findings, num_solutions=10, num_combinations=
 
     return results
 
+
 @MAIN.route( '/diagnosis_result', methods=[ 'GET' ] )
-@print_timing #( index took 793.682 ms )
+@print_timing  # ( index took 793.682 ms )
 def get_result():
     # Symptoms are passed in as a comma-separated value list of IDs
     # e.g symptoms=1,2,3,4
@@ -118,12 +130,13 @@ def get_result():
     # TODO: Support other algorithms
     algorithm = 1
 
-    results = get_algorithm_results( None, findings, 
-                                    num_solutions=num_solutions, 
+    results = get_algorithm_results( None, findings,
+                                    num_solutions=num_solutions,
                                     num_combinations=num_combinations,
                                     algorithm=algorithm )
     results[ 'success' ] = True
     return json.dumps( results )
+
 
 @MAIN.route( '/' )
 @MAIN.route( '/index.html' )

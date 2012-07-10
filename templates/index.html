@@ -3,9 +3,8 @@
 <head>
 	<meta charset='utf-8'>
 	<title>Doknosis</title>
-	
+
 	<link href='http://fonts.googleapis.com/css?family=Droid+Serif' rel='stylesheet' type='text/css'>
-	<link rel="stylesheet" href="/static/css/bootstrap.css">
 	<link rel='stylesheet' href='/static/css/layout.css'>
 	<link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery-ui.css" rel="stylesheet" type="text/css">
 
@@ -40,7 +39,7 @@
 	 			params[ 'algorithm' ] = $( '#algorithm' ).val();
 
 	 			$.getJSON( '/diagnosis_result', params, function( data ) {
-	 				
+
 	 				if( data.success ) {
 	 					$( '#query-time' ).html( 'DB QUERY TIME: ' + data.query_time );
 
@@ -48,13 +47,13 @@
 
 		 				var html = '<table><tr><th>Name</th><th>Score</th></tr>';
 		 				for( var i = 0; i < data.other.length; i++ ) {
-		 					html += '<tr><td>' + data.other[i][0] + '</td><td>' + data.other[i][1] + '</td></tr>'	
+		 					html += '<tr><td>' + data.other[i][0] + '</td><td>' + data.other[i][1] + '</td></tr>'
 		 				}
 		 				html += '</table>'
 		 				$( '#results-list' ).append( html );
 
 		 				$( '#dokbot-waiting' ).fadeOut( 'fast', function() {
-		 					$( '#results' ).fadeIn();	
+		 					$( '#results' ).fadeIn();
 		 				} );
 
 		 			} else {
@@ -90,9 +89,9 @@
 				select: function(event, ui) {
 					var text = ui.item.label;
 			    	ui.item.value = '';
-			
+
 					$( '#symptoms-list > .help-text' ).remove();
-					$( '#symptoms-list' ).append( '<span class="label"><span>' + text + 
+					$( '#symptoms-list' ).append( '<span class="label"><span>' + text +
 						'</span><span data-sid="' + ui.item.id + '" class="rm">x</span></span>' );
 
 					window.symptoms.push( ui.item.id );
@@ -148,32 +147,32 @@
 						<div id='results-list'>
 						</div>
 					</div>
-				</div>			
+				</div>
 				<div style='display:none;'>
 					<h3>Advanced Options</h3>
 					<div id='advanced_options'>
-						<div> 
+						<div>
 							<label for='num_solutions'>Solutions</label>
-							<select id="num_solutions"> 
-								<option value="10">10</option> 
-								<option value="1">1</option> 
-								<option value="5">5</option> 
-								<option value="20">20</option> 
+							<select id="num_solutions">
+								<option value="10">10</option>
+								<option value="1">1</option>
+								<option value="5">5</option>
+								<option value="20">20</option>
 							</select>
 						</div>
-						<div> 
+						<div>
 							<label>Disease Combinations</label>
-							<select id="num_combinations"> 
-								<option value="1">1</option> 
-								<option value="2">2</option> 
+							<select id="num_combinations">
+								<option value="1">1</option>
+								<option value="2">2</option>
 							</select>
 						</div>
-						<div> 
+						<div>
 							<label>Algorithm</label>
-							<select id="algorithm" class="drop_down"> 
-								<option value="1">Hybrid 1</option> 
-								<option value="2">Hybrid 2</option> 
-								<option value="3">Bayesian</option> 
+							<select id="algorithm" class="drop_down">
+								<option value="1">Hybrid 1</option>
+								<option value="2">Hybrid 2</option>
+								<option value="3">Bayesian</option>
 							</select>
 						</div>
 					</div>

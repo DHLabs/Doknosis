@@ -4,15 +4,19 @@ from flaskext.mongoalchemy import MongoAlchemy
 db      = SQLAlchemy()
 mongo   = MongoAlchemy()
 
+
 class FindingWeight( mongo.Document ):
     name    = mongo.StringField()
     weight  = mongo.FloatField()
 
     def __init__( self, name, weight, **kwargs ):
-        mongo.Document.__init__( self, name=name, weight=float( weight ), **kwargs )
+        mongo.Document.__init__( self, name=name,
+                                     weight=float(weight),
+                                     **kwargs )
 
     def to_dict( self ):
         return dict( {'name': self.name, 'weight': self.weight} )
+
 
 class Disease( mongo.Document ):
     name        = mongo.StringField()
