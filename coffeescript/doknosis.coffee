@@ -10,7 +10,8 @@ clear_all = () ->
 		@
 	)
 
-	$( '#symptoms-list' ).append( '<div class=\'help-text\'>No Symptoms Entered</div>' )
+	if $( '#symptoms-list > .help-text' ).length == 0
+		$( '#symptoms-list' ).append( '<div class=\'help-text\'>No Symptoms Entered</div>' )
 	$( '#results' ).hide();
 
 	@
