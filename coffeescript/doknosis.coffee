@@ -47,12 +47,13 @@ get_diagnosis = () ->
 		$( '#query-time' ).html( "DB QUERY TIME: #{data.query_time}" )
 
 		# Setup the most likely result text
-		$( '<div/>' ).css( 'margin', '16px 0' )
+		$( '<div/>' ).addClass( 'diagnosis' )
 					 .html( "<strong>Most Likely:</strong> #{data.greedy}" )
 					 .appendTo( '#results-list' )
 
 		# Create results table
-		results_table = $( '<table/>' ).addClass( 'table' )
+		results_table = $( '<table/>' ).addClass( 'results-table' )
+									   .addClass( 'table' )
 									   .addClass( 'table-striped' )
 									   .append( '<tr><th>Name</th><th>Score</th></tr>' )
 

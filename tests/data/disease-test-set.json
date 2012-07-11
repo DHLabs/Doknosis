@@ -1,0 +1,3 @@
+{ "_id" : ObjectId("4f3189ee80a9765150000000"), "name" : "AIDS", "findings" : [ { "name" : "", "weight" : 0.5 } ] }
+{ "_id" : ObjectId("4f3189ee80a9765150000001"), "name" : "Fake1", "findings" : [ { "name" : "", "weight" : 0.5 } ] }
+{ "_id" : ObjectId("4f3189ee80a9765150000002"), "name" : "Fake2", "findings" : [ { "name" : "", "weight" : 0.5 } ] }

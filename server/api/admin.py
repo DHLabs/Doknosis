@@ -1,11 +1,13 @@
 import json
 
-from flask import Blueprint, request, render_template, redirect, url_for
+from flask import Blueprint, request, render_template, redirect
 
-from server.cache import cache
-from server.db import db, Finding, Disease, FindingWeight
-from sqlalchemy import func
+from server.db import Finding, Disease, FindingWeight
+from server.helpers import success, failure
+
+
 admin_api = Blueprint( 'admin_api', __name__ )
+
 
 @admin_api.route( '/' )
 def admin_index():
@@ -14,8 +16,24 @@ def admin_index():
 
         Returns the 10 latest diseases entered into the database
     '''
-    diseases = Disease.query.limit( 10 ).descending( Disease.mongo_id ).all()
-    return render_template( 'admin.html', random_diseases=diseases )
+
+    page = int( request.args.get( 'page', 1 ) )
+
+    diseases = Disease.query.ascending( Disease.name ).paginate( page=page,
+                     per_page=100 )
+    return render_template( '/admin/browse.html', pagination=diseases )
+
+
+@admin_api.route( '/manage', methods=[ 'GET' ] )
+def manage_diseases():
+    '''
+        manage_diseases
+
+        Gives an admin the option of downloading the CSV database and/or
+        uploading a CSV database to update current one.
+    '''
+    return render_template( '/admin/manage.html' )
+
 
 @admin_api.route( '/add/disease', methods=[ 'GET' ] )
 def add_disease():
@@ -27,7 +45,7 @@ def add_disease():
 
         @param name - Disease name
     '''
-    disease_name = request.args.get( 'name' )
+    disease_name = request.args.get( 'name' ).strip().capitalize()
 
     # Query the database for the disease information
     disease = Disease.query.filter( {'name': disease_name} ).first()
@@ -38,12 +56,13 @@ def add_disease():
         disease = Disease( name=disease_name )
         disease.save()
     else:
-        # If the diseases exists, create a findings list to show on the 
+        # If the diseases exists, create a findings list to show on the
         # edit page
         findings_list = disease.findings
         findings = [ x.to_dict() for x in findings_list ]
 
     return render_template( 'edit.html', disease=disease, findings=findings )
+
 
 @admin_api.route( '/save/disease/<disease_id>' )
 def save_disease( disease_id ):
@@ -54,14 +73,25 @@ def save_disease( disease_id ):
 
         @param name - Disease name
     '''
-    disease_name = request.args.get( 'name' )
-    disease = Disease.query.filter( Disease.mongo_id == disease_id ).first()
+    disease_name = request.args.get( 'name', None )
+    if disease_name is None:
+        return failure( 'Invalid Disease Name' )
 
-    if disease is not None:
-        disease.name = disease_name
-        disease.save()
-    
-    return json.dumps({})
+    disease_name = disease_name.strip().capitalize()
+
+    try:
+        disease = Disease.query.filter(Disease.mongo_id == disease_id).first()
+    except Exception:
+        return failure( 'Invalid Disease ID' )
+
+    if disease is None:
+        return failure( 'Invalid Disease ID' )
+
+    disease.name = disease_name
+    disease.save()
+
+    return success()
+
 
 @admin_api.route( '/delete/disease/<disease_id>', methods=[ 'GET' ] )
 def delete_disease( disease_id ):
@@ -72,11 +102,17 @@ def delete_disease( disease_id ):
 
         @param disease_id - Disease MongoDB id
     '''
-    disease = Disease.query.filter( Disease.mongo_id == disease_id ).first()
+    try:
+        disease = Disease.query.filter(Disease.mongo_id == disease_id).first()
+    except Exception:
+        # Invalid disease id, just send back to admin page.
+        return redirect( '/admin' )
+
     if disease is not None:
         disease.remove()
 
     return redirect( '/admin' )
+
 
 @admin_api.route( '/add/<disease_id>/finding', methods=[ 'POST' ] )
 def add_finding( disease_id ):
@@ -89,35 +125,50 @@ def add_finding( disease_id ):
         @param name         - Finding name
         @param weight       - Finding weight
     '''
-    finding_name = request.form[ 'name' ]
-    weight       = float( request.form[ 'weight' ] )
+    finding_name = request.form.get( 'name', None )
 
+    if finding_name is None:
+        return failure( 'Invalid Finding Name' )
+
+    finding_name = finding_name.strip().lower()
+    try:
+        weight       = float( request.form[ 'weight' ] )
+    except ValueError:
+        return failure( 'Invalid Finding Weight' )
+
+    # Find the disease to add this finding too
     disease = Disease.query.filter( Disease.mongo_id == disease_id ).first()
+
+    # Check our findings list to see if we have this finding already or not
     finding = Finding.query.filter( Finding.name == finding_name ).first()
 
+    # Add this finding to the findings list
     if finding is None:
         finding = Finding( name=finding_name )
         finding.save()
-    
-    disease.findings.append( FindingWeight( name=finding_name, weight=weight ) )
+
+    # Add this finding to the disease
+    disease.findings.append(FindingWeight( name=finding_name, weight=weight ))
     disease.save()
 
-    return json.dumps({})
+    return success()
+
 
 @admin_api.route( '/delete/<disease_id>/finding/', methods=[ 'POST' ] )
 def delete_empty_finding( disease_id ):
     '''
         delete_empty_finding
 
-        If for some reason a finding's name is empty ( by accident or in the CSV )
-        This method helps alleviate that corner case. Calls delete_finding with 
-        an empty finding_id
+        If for some reason a finding's name is empty ( by accident or in the
+        CSV ) This method helps alleviate that corner case. Calls
+        delete_finding with an empty finding_id
 
         @param disease_id - Disease MongoDB id
     '''
     return delete_finding( disease_id, '' )
 
-@admin_api.route( '/delete/<disease_id>/finding/<finding_id>', methods=[ 'POST' ] )
+
+@admin_api.route('/delete/<disease_id>/finding/<finding_id>', methods=['POST'])
 def delete_finding( disease_id, finding_id ):
     '''
         delete_finding
@@ -127,16 +178,27 @@ def delete_finding( disease_id, finding_id ):
         @param disease_id - Disease MongoDB id
         @param finding_id - Finding id
     '''
-    disease = Disease.query.filter( Disease.mongo_id==disease_id ).first()
+    try:
+        disease = Disease.query.filter(Disease.mongo_id == disease_id).first()
+    except Exception:
+        return failure( 'Invalid Disease ID' )
 
     # Find finding and remove it
     for find in disease.findings:
         if find.name == finding_id:
             disease.findings.remove( find )
             break
-
     disease.save()
-    return json.dumps( {} )    
+
+    # Also check if this finding no longer exists in the db.
+    count = Disease.query.filter({'findings.name': finding_id}).count()
+    if count == 0:
+        # Remove from findings list
+        finding = Finding.query.filter( Finding.name == finding_id ).first()
+        finding.remove()
+
+    return success()
+
 
 @admin_api.route( '/edit/<disease_id>')
 def edit_disease( disease_id ):
@@ -153,6 +215,7 @@ def edit_disease( disease_id ):
 
     return render_template( 'edit.html', disease=disease, findings=findings )
 
+
 @admin_api.route( '/disease/autocomplete', methods=['GET'] )
 def finding_autocomplete():
     '''
@@ -162,9 +225,9 @@ def finding_autocomplete():
 
         @param term - Substring of finding name we're searching for.
     '''
-    term = request.args.get( 'term' )
+    term = request.args.get( 'term', '' )
 
-    diseases = Disease.query.filter( { 'name': { '$regex': '.*%s.*' % ( term ) } } )\
+    diseases = Disease.query.filter( {'name': {'$regex': '.*%s.*' % (term)}} )\
                     .limit( 20 )\
                     .ascending( Disease.name )\
                     .all()
@@ -176,4 +239,3 @@ def finding_autocomplete():
                                 'label': finding.name,\
                                 'value': finding.name } )
     return json.dumps( json_findings )
-    

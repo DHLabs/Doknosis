@@ -46,8 +46,8 @@ get_diagnosis = function() {
       return;
     }
     $('#query-time').html("DB QUERY TIME: " + data.query_time);
-    $('<div/>').css('margin', '16px 0').html("<strong>Most Likely:</strong> " + data.greedy).appendTo('#results-list');
-    results_table = $('<table/>').addClass('table').addClass('table-striped').append('<tr><th>Name</th><th>Score</th></tr>');
+    $('<div/>').addClass('diagnosis').html("<strong>Most Likely:</strong> " + data.greedy).appendTo('#results-list');
+    results_table = $('<table/>').addClass('results-table').addClass('table').addClass('table-striped').append('<tr><th>Name</th><th>Score</th></tr>');
     for (i = _i = 0, _ref = data.other.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
       $('<tr/>').append("<td> " + data.other[i][0] + " </td>").append("<td> " + data.other[i][1] + " </td>").appendTo(results_table);
     }

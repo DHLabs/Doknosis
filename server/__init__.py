@@ -21,16 +21,6 @@ MAIN  = Flask( __name__, static_folder='../static',
                        template_folder='../templates' )
 
 
-def print_timing(func):
-    def wrapper(*arg):
-        t1 = time.time()
-        res = func(*arg)
-        t2 = time.time()
-        print '%s took %0.3f ms' % (func.func_name, (t2 - t1) * 1000.0)
-        return res
-    return wrapper
-
-
 def create_app( settings='server.settings.Dev' ):
     MAIN.config.from_object( settings )
 
@@ -40,8 +30,8 @@ def create_app( settings='server.settings.Dev' ):
     mongo.init_app( MAIN )
 
     # Register apis
-    MAIN.register_blueprint( findings_api, url_prefix='/api' )
-    MAIN.register_blueprint( admin_api, url_prefix='/admin' )
+    MAIN.register_blueprint( findings_api,  url_prefix='/api/finding' )
+    MAIN.register_blueprint( admin_api,     url_prefix='/admin' )
 
     return MAIN
 
@@ -69,10 +59,10 @@ def get_algorithm_results( knowns, findings, num_solutions=10,
 
     # Run the current greedy Staal algorithm
     if algorithm == ALGO_HYBRID_1:
-        #If n_disease_combinations is greater than 1, create multiple tables.
-        #Say user chooses 3, then create tables for 1, 2 and 3.
-        results[ 'greedy' ]  = []
-        results[ 'other' ] = []
+        # If n_disease_combinations is greater than 1, create multiple tables.
+        # Say user chooses 3, then create tables for 1, 2 and 3.
+        results[ 'greedy' ] = []
+        results[ 'other' ]  = []
 
         for combinations in range(1, num_combinations + 1):
 
@@ -109,7 +99,6 @@ def get_algorithm_results( knowns, findings, num_solutions=10,
 
 
 @MAIN.route( '/diagnosis_result', methods=[ 'GET' ] )
-@print_timing  # ( index took 793.682 ms )
 def get_result():
     # Symptoms are passed in as a comma-separated value list of IDs
     # e.g symptoms=1,2,3,4
@@ -141,4 +130,7 @@ def get_result():
 @MAIN.route( '/' )
 @MAIN.route( '/index.html' )
 def index():
+    '''
+        Render the main page
+    '''
     return render_template( 'index.html' )

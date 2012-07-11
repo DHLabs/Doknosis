@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang='en'>
+<head>
+	<meta charset='utf-8'>
+	<title>Doknosis | Admin Panel</title>
+
+	<link rel='stylesheet' href='/static/css/layout.css' type='text/css'>
+	<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7/jquery.min.js"></script>
+	<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.min.js"></script>
+
+	<script type='text/javascript'>
+		$( function() {
+			$( "#diseases" ).autocomplete({
+				source: '/admin/disease/autocomplete',
+				select: function(event, ui) {
+			    	window.location = '/admin/edit/' + ui.item.id;
+				}
+			});
+	 	});
+
+	 	function add_disease() {
+	 		var dname = $( '#diseases' ).val();
+	 		if( dname.length == 0 ) {
+	 			alert( 'Please enter a disease name in the textbox first!' );
+	 		} else {
+	 			window.location = '/admin/add/disease?name=' + encodeURIComponent( $( '#diseases' ).val() );
+	 		}
+	 	}
+	 </script>
+</head>
+
+<body>
+	<div class='navbar'>
+		<div class='navbar-inner'>
+			<div class='container'>
+				<a class='brand' href='#'>Doknosis Admin Panel</a>
+				<ul class='nav'>
+					<li class='active'><a href='#'>Browse</a></li>
+					<li><a href='/admin/manage'>Manage</a></li>
+				</ul>
+				<div class='navbar-form'>
+					<div class='pull-left'>
+						<input type='text' class='span5' id='diseases' placeholder='Type disease name to begin!'>
+					</div>
+					<div class='pull-left'>
+						<button class='btn btn-primary' onclick='add_disease();'>Add Disease</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	{% block content %}
+	{% endblock %}
+</body>
+</html>

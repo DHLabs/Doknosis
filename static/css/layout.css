@@ -3727,7 +3727,8 @@ a.label:hover, a.badge:hover {
 
 /* Override some defaults */
 html, body {
-  background: url("/static/img/bg.png") white; }
+  background: url("/static/img/bg.png") white;
+  line-height: 150%; }
 
 ::-moz-selection {
   background: #FFF;
@@ -3805,13 +3806,18 @@ html, body {
   border: 1px solid #DDD;
   color: #111;
   border-radius: 4px; }
+  #results .diagnosis {
+    font-size: 20px; }
+  #results .results-table {
+    margin-top: 32px; }
 
 /* Autocomplete UI */
 .ui-autocomplete {
   background-color: #FFF;
-  border: 1px solid #FFF;
+  border: 1px solid #AAA;
   width: 270px;
-  list-style-type: none; }
+  list-style-type: none;
+  box-shadow: 0 5px 10px #999; }
   .ui-autocomplete .ui-menu-item {
     margin: 0px;
     padding: 0px;
