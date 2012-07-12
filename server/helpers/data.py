@@ -70,7 +70,7 @@ def parse_csv( file ):
 
             # Only save finding data if there are no errors parsing the
             # findings
-            if not finding_parse_error:
+            if not finding_parse_error and len( errors ) == 0:
                 disease.findings = findings
                 disease.save()
         else:
@@ -81,7 +81,7 @@ def parse_csv( file ):
 
             # Only save the new disease if there are no errors parsing the
             # findings
-            if not finding_parse_error:
+            if not finding_parse_error and len( errors ) == 0:
                 disease = Disease( name=disease_name )
                 disease.findings = findings
                 disease.save()
