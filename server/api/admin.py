@@ -1,12 +1,21 @@
-import json
+import csv
+import os
 
-from flask import Blueprint, request, render_template, redirect
+from flask import Blueprint, request, render_template, redirect, flash
+from flask import send_from_directory
+from flask import current_app as app
 
 from server.db import Finding, Disease, FindingWeight
 from server.helpers import success, failure
-
+from server.helpers.data import parse_csv
+from werkzeug import secure_filename
 
 admin_api = Blueprint( 'admin_api', __name__ )
+
+
+def allowed_file( filename ):
+    return '.' in filename and \
+        filename.rsplit( '.', 1 )[1] in app.config[ 'ALLOWED_EXTENSIONS' ]
 
 
 @admin_api.route( '/' )
@@ -22,6 +31,78 @@ def admin_index():
     diseases = Disease.query.ascending( Disease.name ).paginate( page=page,
                      per_page=100 )
     return render_template( '/admin/browse.html', pagination=diseases )
+
+
+@admin_api.route( '/csv_upload', methods=[ 'POST' ] )
+def csv_upload():
+    '''
+        csv_upload
+
+        Parse and add data from the CSV to the database
+    '''
+    if request.method != 'POST':
+        return redirect( '/admin/manage' )
+
+    file = request.files[ 'file' ]
+    if file and allowed_file( file.filename ):
+        filename = secure_filename( 'tmp.csv' )
+        tmp_file = os.path.join( app.config[ 'UPLOAD_FOLDER' ], filename )
+        file.save( tmp_file )
+
+        # Now process the sucker!
+        errors = parse_csv( tmp_file )
+        print errors
+
+        if len( errors ) > 0:
+            for error in errors:
+                flash( error, 'error' )
+        else:
+            flash( 'File uploaded and parsed successfully!', 'success' )
+
+        # Remove the tmp file
+        os.remove( tmp_file )
+
+    return redirect( '/admin/manage' )
+
+
+@admin_api.route( '/csv_download', methods=[ 'GET' ] )
+def csv_download():
+    '''
+        csv_download
+
+        Queries the database for ALL diseases and returns the results as a
+        CSV to be edited. The CSV will be sorted by disease name.
+
+        The format in which the csv will as follows:
+        <disease id>, <disease name>, <finding 1>, <finding 2>, ...
+
+        The findings will be formatted as such:
+        <finding name>:<finding weight>
+
+        Thus for example, the following could be outputted as a CSV:
+
+        43ae01, Disease1, male:0.5, cough:1
+        43ae02, Disease2, cough:0.25, elderly:0.50, fever:0.25
+
+    '''
+
+    # Query all the diseases
+    diseases = Disease.query.ascending( Disease.name ).all()
+
+    # Write it out to a CSV file
+    directory = os.path.join( app.config[ 'UPLOAD_FOLDER' ], 'doknosis.csv' )
+    csvWriter = csv.writer( open( directory, 'wb' ) )
+
+    for disease in diseases:
+        row = [ disease.mongo_id, disease.name ]
+
+        for finding in disease.findings:
+            row.append( '%s:%f' % ( finding.name, finding.weight ) )
+
+        csvWriter.writerow( row )
+
+    # Deliver the CSV file to the user
+    return send_from_directory( app.config[ 'UPLOAD_FOLDER' ], 'doknosis.csv' )
 
 
 @admin_api.route( '/manage', methods=[ 'GET' ] )
@@ -214,28 +295,3 @@ def edit_disease( disease_id ):
     findings = [ x.to_dict() for x in disease.findings ]
 
     return render_template( 'edit.html', disease=disease, findings=findings )
-
-
-@admin_api.route( '/disease/autocomplete', methods=['GET'] )
-def finding_autocomplete():
-    '''
-        finding_autocomplete
-
-        Handles autocomplete queries for finding names
-
-        @param term - Substring of finding name we're searching for.
-    '''
-    term = request.args.get( 'term', '' )
-
-    diseases = Disease.query.filter( {'name': {'$regex': '.*%s.*' % (term)}} )\
-                    .limit( 20 )\
-                    .ascending( Disease.name )\
-                    .all()
-
-    # Convert into an JSON object
-    json_findings = []
-    for finding in diseases:
-        json_findings.append( { 'id':    str( finding.mongo_id ),\
-                                'label': finding.name,\
-                                'value': finding.name } )
-    return json.dumps( json_findings )

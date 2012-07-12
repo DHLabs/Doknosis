@@ -37,3 +37,28 @@ def disease_list():
 @diseases_api.route( '/findings', methods=['GET'] )
 def disease_findings():
     pass
+
+
+@diseases_api.route( '/autocomplete', methods=['GET'] )
+def disease_autocomplete():
+    '''
+        disease_autocomplete
+
+        Handles autocomplete queries for diseases
+
+        @param term - Substring of disease name we're searching for.
+    '''
+    term = request.args.get( 'term', '' )
+
+    diseases = Disease.query.filter( {'name': {'$regex': '.*%s.*' % (term)}} )\
+                    .limit( 20 )\
+                    .ascending( Disease.name )\
+                    .all()
+
+    # Convert into an JSON object
+    json_findings = []
+    for finding in diseases:
+        json_findings.append( { 'id':    str( finding.mongo_id ),\
+                                'label': finding.name,\
+                                'value': finding.name } )
+    return json.dumps( json_findings )

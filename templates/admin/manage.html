@@ -1,13 +1,101 @@
 {% extends "/admin/layout.html" %}
 
 {% block content %}
-	<div class="container" style='background:#FFF;'>
-		<div style='padding:16px;'>
-			<div class='row'>
-				<div class='span12'>
-					<a href='#' class='btn btn-primary'>Download Editable CSV</a>
+	<div class="container" style='background:#FFF;padding:16px;'>
+		<div class='row'>
+			<div class='span12'>
+				{% with messages = get_flashed_messages(category_filter=['success']) %}
+				{% if messages %}
+					<div class='alert alert-success'>
+						<h4 class='alert-heading'>Database Changes Accepted!</h4>
+						{% for message in messages %}
+							<div>{{message}}</div>
+						{% endfor %}
+					</div>
+				{% endif %}
+				{% endwith %}
+				{% with error_messages = get_flashed_messages(category_filter=['error']) %}
+				{% if error_messages %}
+					<div class='alert alert-error'>
+						<h4 class='alert-heading'>We had problems parsing your CSV file!</h4>
+						{% for message in error_messages %}
+							<div>{{message}}</div>
+						{% endfor %}
+					</div>
+				{% endif %}
+				{% endwith %}
+				<div style='margin-bottom:32px;'>
+					<a href='/admin/csv_download' class='btn btn-primary'>Download Editable CSV</a>
 				</div>
+				<form class='form-vertical well' action='/admin/csv_upload' method='POST' enctype='multipart/form-data'>
+					<input type='file' name='file' class='span3'>
+					<span class='help-block'>
+						The CSV file will be validated before any changes to the database are made
+					</span>
+					<button type='submit' class='btn btn-primary'>Upload!</button>
+				</form>
 			</div>
-		</div>[]
+		</div>
+		<div class='row'>
+			<div class='span12'>
+				<h2>Disease/Findings Format</h2>
+				<p>
+				<strong>CSV files will be validated against the following format before any changes to the database are made</strong>>
+
+				<p>
+				The format is as follows: <strong>Disease ID</strong>, <strong>Disease Name</strong>, and then
+				a variable number of <strong>disease findings</strong>
+
+				<table class='table table-striped'>
+					<tr><th>
+						Disease ID
+					</th><th>
+						Disease Name
+					</th><th>
+						Disease Findings
+					</th></tr>
+					<tr>
+						<td>
+							Ex: 4f3189ee80a976515000005b
+						</td>
+						<td>
+							Ex: Actinomycosis - thoracic
+						</td>
+						<td>
+							Ex: male:0.5
+						</td>
+					</tr>
+				</table>
+
+				<p>
+				For example, a csv file could look like the following:
+				<br>43ae01, Disease1, male:0.5, cough:1
+    			<br>43ae02, Disease2, cough:0.25, elderly:0.50, fever:0.25
+
+				<h3>A Couple Rules</h3>
+				<ol>
+					<li>
+						Diseases with a disease ID are replaced with the data in the CSV. Thus you can update only
+						a handful at a time by ensuring each row in the CSV file has the disease ID for the disease
+						you want updated.
+					</li>
+					<li>
+						Diseases without a disease ID are considered <strong>new</strong>,
+						and added to the database.
+					</li>
+					<li>
+						Disease names are trimmed of excess whitespace and capitalized
+					</li>
+					<li>
+						Finding names are trimmed of excess whitespace and transformed into
+						all lowercase characters
+					</li>
+					<li>
+						<strong>There is currently no way to mass delete diseases</strong>
+					</li>
+				</ol>
+
+			</div>
+		</div>
 	</div>
 {% endblock %}
