@@ -16,8 +16,8 @@
 ################################################################################
 
 
-# In attempting to modify this, I had to do a bunch of commenting so that I understand the code.  In the process,
-# I came up with lots of Questions.  Here are a few of them, by method:
+# Comments from Rishi -- In attempting to modify this, I had to do a bunch of commenting so that I understand the code.  In the process,
+# I came up with lots of questions.  Here are a few of them, by method:
 #
 #   in greedy method:
 # 1) How does this work if set(E) and set(target) have no intersection?  Then sol is empty, right?
@@ -28,7 +28,8 @@
 # 5) What is the purpose of eprev and gamma methods, which are fixed at 1 in this script?
 #
 #   in runDiagnosis method:
-# 1) Is longest common substring better than something like damerau_levenshtein_distance?  I haven't compared.
+# 1) Is LCS a better distance metric than something like damerau_levenshtein_distance?  I haven't compared.
+
 
 import sys
 from lcs import strdiff, lenLCS
@@ -124,6 +125,10 @@ def setDictionaries(newest_OR_G):
     OR_G = newest_OR_G
     
 def runDiagnosis(Findings=[]):
+    """ Given a lsit of findings, produce a list of states most likely to explain them given the current weights in the EO dictionary.
+
+    @param Findings list of observations for which we want to extract a coherent set of explanations
+    """
     
     testG = OR_G 
     O = reduce(lambda x,y : x | set(testG[y].keys()), testG.keys(), set())

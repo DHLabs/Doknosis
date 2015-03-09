@@ -10,14 +10,28 @@ def _parse_findings( disease_findings, errors, line_no ):
 
     # Parse the findings
     for finding in disease_findings:
-        if ':' not in finding:
-            errors.append( 'Line %d: Invalid finding format'
-                            % ( line_no ) )
-            finding_parse_error = True
-            break
+        spl=finding.split(':')
+        if len(spl) < 2:
+            # Ignore any finding which does not have an associated prevalence.  Assume these are just comments, so we will not return an error.
+            continue
+        else:
+            name = ':'.join(spl[:-1]).lower()
+            try:
+                weight = float(spl[-1])
+                if weight > 1 or weight < 0:
+                    # If a finding has an invalid prevalence number, spit out a warning and ignore it.
+                    print('Warning -- Finding \"{}\", prevalence weight ({}) not in [0,1].  Ignoring this finding.'.format(name,weight))
+                    finding_parse_error = True
+                    break
 
-        name, weight = finding.split( ':' )
+            except ValueError:
+                # If prevalence value is not a probability, skip this finding!
+                print('Warning -- Finding \"{}\", prevalence weight ({}) not a number.  Ignoring this finding.'.format(name,spl[-1]))
+                finding_parse_error = True
+                break
+
         findings.append( FindingWeight( name=name, weight=weight ) )
+
 
     return ( finding_parse_error, findings )
 
