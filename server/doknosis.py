@@ -183,10 +183,10 @@ def runDiagnosis(Findings=[]):
     solutions_and_values = []
     
     for solution in solutions:
-        disease = str(solution)
+        explanation = str(solution)
         list_explained_to_degree_each_finding = [str(a_value) for a_value in value([solution], target, rfunc)[1]]
         
-        solutions_and_values += [[disease] + list_explained_to_degree_each_finding]
+        solutions_and_values += [[explanation] + list_explained_to_degree_each_finding]
         
         
     #print solutions_and_values

@@ -38,21 +38,24 @@
 		</div>
 		<div class='row'>
 			<div class='span12'>
-				<h2>Disease/Findings Format</h2>
+				<h2>Explanatory variable/Findings Format</h2>
 				<p>
 				<strong>CSV files will be validated against the following format before any changes to the database are made</strong>>
 
 				<p>
-				The format is as follows: <strong>Disease ID</strong>, <strong>Disease Name</strong>, and then
-				a variable number of <strong>disease findings</strong>
+				The format is as follows: <strong>Explanatory variable ID</strong>, <strong>Explanation Name</strong>, 
+				<strong>Explanation Type Identifier</strong>, followed by
+				a variable number of <strong>explanation findings</strong>
 
 				<table class='table table-striped'>
 					<tr><th>
-						Disease ID
+						Explanatory variable ID
 					</th><th>
-						Disease Name
+						Explanatory variable Name
 					</th><th>
-						Disease Findings
+						Explanation type Identifier Ex: "Drug" or "Disease"
+					</th><th>
+						Associated Findings
 					</th></tr>
 					<tr>
 						<td>
@@ -69,29 +72,29 @@
 
 				<p>
 				For example, a csv file could look like the following:
-				<br>43ae01, Disease1, male:0.5, cough:1
-    			<br>43ae02, Disease2, cough:0.25, elderly:0.50, fever:0.25
+				<br>43ae01, Explanation1, Drug, male:0.5, cough:1
+    				<br>43ae02, Explanation2, Disease, cough:0.25, elderly:0.50, fever:0.25
 
 				<h3>A Couple Rules</h3>
 				<ol>
 					<li>
-						Diseases with a disease ID are replaced with the data in the CSV. Thus you can update only
-						a handful at a time by ensuring each row in the CSV file has the disease ID for the disease
+						Explanatory variables with an ID are replaced with the data in the CSV. Thus you can update only
+						a handful at a time by ensuring each row in the CSV file has the ID for the explanatory variable
 						you want updated.
 					</li>
 					<li>
-						Diseases without a disease ID are considered <strong>new</strong>,
+						Explanatory variables without an ID are considered <strong>new</strong>,
 						and added to the database.
 					</li>
 					<li>
-						Disease names are trimmed of excess whitespace and capitalized
+						Explanatory variable names are trimmed of excess whitespace and capitalized
 					</li>
 					<li>
 						Finding names are trimmed of excess whitespace and transformed into
 						all lowercase characters
 					</li>
 					<li>
-						<strong>There is currently no way to mass delete diseases</strong>
+						<strong>There is currently no way to mass delete explanatory variables</strong>
 					</li>
 				</ol>
 

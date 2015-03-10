@@ -38,6 +38,7 @@ get_diagnosis = function() {
     findings: window.symptoms.join(','),
     num_solutions: $('#num_solutions').val(),
     num_combinations: $('#num_combinations').val(),
+    type_identifier: $('#type_identifier').val(),
     algorithm: $('#algorithm').val()
   };
   $.getJSON('/diagnosis_result', params, function(data) {

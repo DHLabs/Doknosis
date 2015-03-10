@@ -4,7 +4,7 @@ import time
 from operator import or_,itemgetter
 from heapq import nlargest
 
-from server.db import Disease
+from server.db import Explanation
 
 def combinations(iterable, r):
     # combinations('ABCD', 2) --> AB AC AD BC BD CD
@@ -38,10 +38,11 @@ def bruteN(explanations, measure, n = 1):
     return sorted(map(lambda x: (measure(x), x), combinations(explanations, n)), reverse = True)
     #TODO this is not anything useful right here
 
-def createMeasure( disease_map, findings, w = lambda x: 1, f = lambda x: 1, d = lambda x: 1):
+
+def createMeasure( explanation_map, findings, w = lambda x: 1, f = lambda x: 1, d = lambda x: 1):
     '''
     Potentially add a fourth parameter that uses the relationship between the explanations
-    How likely a set of explanations are able to explain a particular disease(finding)
+    How likely a set of explanations are able to explain a particular finding
     Binary, full graph, for example the edge is 0 if two explanations cannot coexist together
     And edge weight 1 if one explanation is necessary for the other. Ex. HIV -> PCP (pneuomocystis carinii  pneumonia). Diabetes-> Diabetes retinopathy. Directed graph
     Diabetes can exist without diabetes retinopathy, but diabetes retinopathy cannot exist without diabetes
@@ -57,24 +58,23 @@ def createMeasure( disease_map, findings, w = lambda x: 1, f = lambda x: 1, d = 
     a = 1
     b = 1
 
-    lambdaFunc = (lambda explanations: a * (len(findings) - len(findings - reduce(or_,[set( disease_map[ e ].keys() ) for e in explanations],set())))
-                  + b * (strengthFunc( disease_map, explanations, findings)) 
+    lambdaFunc = (lambda explanations: a * (len(findings) - len(findings - reduce(or_,[set( explanation_map[ e ].keys() ) for e in explanations],set())))
+                  + b * (strengthFunc( explanation_map, explanations, findings)) 
                   )
     return lambdaFunc
 
 
-def strengthFunc( disease_map, explanations, findings):
-    #explanation is a disease
+def strengthFunc( explanation_map, explanations, findings):
     explanations_to_finding_weight = []
     
     for explanation in explanations:
-        findingToDiseaseWeight = disease_map[explanation]
+        findingToExplanationWeight = explanation_map[explanation]
         list_of_weights = []
 
         for finding in findings:
             weight = 0
-            if finding in findingToDiseaseWeight:
-                weight = findingToDiseaseWeight[finding]
+            if finding in findingToExplanationWeight:
+                weight = findingToExplanationWeight[finding]
 
             list_of_weights.append( weight )
 
@@ -119,11 +119,11 @@ def greedy(G, findings, measure):
         return sol
 
 
-def rank_probs(prob_disease, m_largest=10):
+def rank_probs(prob_explanation, m_largest=10):
     """Rank probabilities from largest to smallest
     And get m_largest amount
     """
-    return nlargest(m_largest, prob_disease.iteritems(), itemgetter(1))
+    return nlargest(m_largest, prob_explanation.iteritems(), itemgetter(1))
 
 def tupleToDict(list_of_tuples):
     """
@@ -136,15 +136,15 @@ def tupleToDict(list_of_tuples):
     D[string1_string2] = val
     """
     
-    diseases_to_prob_dict = {}
+    explanations_to_prob_dict = {}
     for tuple in list_of_tuples:
         val = tuple[0]
-        disease_names = ', '.join( tuple[1] )
-        diseases_to_prob_dict[ disease_names ] = val
+        explanation_names = ', '.join( tuple[1] )
+        explanations_to_prob_dict[ explanation_names ] = val
 
-    return diseases_to_prob_dict
+    return explanations_to_prob_dict
 
-def run_hybrid_1( knowns, findings, num_solutions=10, num_combinations=1 ):
+def run_hybrid_1( knowns, findings, num_solutions=10, num_combinations=1, type_identifier="Disease" ):
     '''
     Vinterbo Country, find best solution for findings in G using Greedy and Measure
 
@@ -154,32 +154,36 @@ def run_hybrid_1( knowns, findings, num_solutions=10, num_combinations=1 ):
     '''
 
     # Using Vinterbo solution
-    diseases_list = None
+    explanations_list = None
 
     # Filter by knowns
     t1 = time.time()
-    diseases_list = Disease.query.filter({ 'findings.name': {'$in': findings }}).all()    
+    if type_identifier == "All":
+        explanations_list = Explanation.query.filter({ 'findings.name': {'$in': findings }}).all()    
+    else:
+        explanations_list = Explanation.query.filter({'type_identifier': {'==':type_identifier}}, { 'findings.name': {'$in': findings }}).all()
+
     query_time = ( time.time() - t1 ) * 1000.0
 
     findings = set( findings )
 
     # Convert from list to hashmap
-    disease_map = {}
-    for disease in diseases_list:
-        disease_map[ disease.name ] = {}
+    explanation_map = {}
+    for explanation in explanations_list:
+        explanation_map[ explanation.name ] = {}
 
-        for finding in disease.findings:
-            disease_map[ disease.name ].update( {finding.name: finding.weight} )
+        for finding in explanation.findings:
+            explanation_map[ explanation.name ].update( {finding.name: finding.weight} )
 
-    measure = createMeasure( disease_map, findings )
-    greedy_solution = greedy( disease_map, findings, measure )
+    measure = createMeasure( explanation_map, findings )
+    greedy_solution = greedy( explanation_map, findings, measure )
     
     if greedy_solution is not None:
         greedy_sol = str(greedy_solution[0])
     else:
         greedy_sol = "No greedy solution"
         
-    sizeN_sol = bruteN( disease_map, measure, num_combinations )
+    sizeN_sol = bruteN( explanation_map, measure, num_combinations )
 
     sizeN_sol_dict = tupleToDict( sizeN_sol )
 
@@ -189,22 +193,26 @@ def run_hybrid_1( knowns, findings, num_solutions=10, num_combinations=1 ):
 
     return ( query_time, results )
 
-def run_hybrid_2( knowns, findings, num_solutions=10, num_combinations=1 ):
+def run_hybrid_2( knowns, findings, num_solutions=10, num_combinations=1, type_identifier="Disease" ):
     # Filter by knowns
-    diseases_all  = Disease.query.all()
-    diseases_list = Disease.query.filter({ 'findings.name': {'$in': findings }}).all()
+    # explanations_all  = Explanation.query.all()
+    if type_identifier == "Any":
+        explanations_list = Explanation.query.filter({ 'findings.name': {'$in': findings }}).all()
+    else:
+        # I think there's a cleaner way to do this, but trying not to mess with what's already here.
+        explanations_list = Explanation.query.filter({'type_identifier': {'==':type_identifier}}, { 'findings.name': {'$in': findings }}).all()
 
     # Convert from list to hashmap
-    for disease in diseases_list:
-        disease_map[ disease.name ] = {}
+    for explanation in explanations_list:
+        explanation_map[ explanation.name ] = {}
 
-        for finding in disease.findings:
-            disease_map[ disease.name ].update( {finding.finding_id: finding.weight} )
+        for finding in explanation.findings:
+            explanation_map[ explanation.name ].update( {finding.finding_id: finding.weight} )
     
-    explanations = set( diseases_all.keys() )
+    # explanations = set( explanations_all.keys() )
 
     return None
         
 
-def run_bayesian( knowns, findings, num_solutions=10, num_combinations=1 ):
+def run_bayesian( knowns, findings, num_solutions=10, num_combinations=1, type_identifier="Disease" ):
     pass

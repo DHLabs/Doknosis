@@ -4,7 +4,6 @@ from flaskext.mongoalchemy import MongoAlchemy
 db      = SQLAlchemy()
 mongo   = MongoAlchemy()
 
-
 class FindingWeight( mongo.Document ):
     name    = mongo.StringField()
     weight  = mongo.FloatField()
@@ -18,12 +17,13 @@ class FindingWeight( mongo.Document ):
         return dict( {'name': self.name, 'weight': self.weight} )
 
 
-class Disease( mongo.Document ):
+class Explanation( mongo.Document ):
     name        = mongo.StringField()
+    type_identifier = mongo.StringField()
     findings    = mongo.ListField( mongo.DocumentField( FindingWeight ) )
 
-    def __init__( self, name, findings=[], **kwargs ):
-        mongo.Document.__init__( self, name=name, **kwargs )
+    def __init__( self, name, type_identifier, findings=[], **kwargs ):
+        mongo.Document.__init__( self, name=name, type_identifier=type_identifier, **kwargs )
         self.findings = findings
 
 

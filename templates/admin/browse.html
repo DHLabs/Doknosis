@@ -15,14 +15,14 @@
 							{% endif %}
 						</p>
 					</div>
-					<h2>Browse Diseases</h2>
+					<h2>Browse Explanatory Variables</h2>
 				</div>
 				<div class='span12' id='edit'>
-					{% for disease in pagination.items %}
+					{% for explanation in pagination.items %}
 					<div style='padding:8px;'>
-						<div><a href='/admin/edit/{{disease.mongo_id}}'>{{disease.name}}</a></div>
+						<div><a href='/admin/edit/{{explanation.mongo_id}} ({{explanation.type_identifier}})'>{{explanation.name}}</a></div>
 						<div>
-						{% for finding in disease.findings %}
+						{% for finding in explanation.findings %}
 							{{ finding.name }}[{{finding.weight}}],
 						{% endfor %}
 						</div>

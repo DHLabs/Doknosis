@@ -1,23 +1,24 @@
 import csv
 
-from server.db import Disease, FindingWeight
+from server.db import Explanation, FindingWeight
+from server.constants import EXPLANATION_TYPE_IDENTIFIERS
 
 
-def _parse_findings( disease_findings, errors, line_no ):
-    findings = []
+def _parse_findings( raw_finding_strings, errors, line_no ):
+    finding_weights = []
 
     finding_parse_error = False
 
     # Parse the findings
-    for finding in disease_findings:
-        spl=finding.split(':')
-        if len(spl) < 2:
+    for finding_string in raw_finding_strings:
+        finding_components=finding_string.split(':')
+        if len(finding_components) < 2:
             # Ignore any finding which does not have an associated prevalence.  Assume these are just comments, so we will not return an error.
             continue
         else:
-            name = ':'.join(spl[:-1]).lower()
+            name = ':'.join(finding_components[:-1]).lower()
             try:
-                weight = float(spl[-1])
+                weight = float(finding_components[-1])
                 if weight > 1 or weight < 0:
                     # If a finding has an invalid prevalence number, spit out a warning and ignore it.
                     errors.append('Finding \"{}\", prevalence weight ({}) not in [0,1].'.format(name,weight))
@@ -26,14 +27,14 @@ def _parse_findings( disease_findings, errors, line_no ):
 
             except ValueError:
                 # If prevalence value is not a probability, skip this finding!
-                errors.append('Finding \"{}\", prevalence weight ({}) not a number.'.format(name,spl[-1]))
+                errors.append('Finding \"{}\", prevalence weight ({}) not a number.'.format(name,finding_components[-1]))
                 finding_parse_error = True
                 break
 
-        findings.append( FindingWeight( name=name, weight=weight ) )
+        finding_weights.append( FindingWeight( name=name, weight=weight ) )
 
 
-    return ( finding_parse_error, findings )
+    return ( finding_parse_error, finding_weights )
 
 
 def parse_csv( file ):
@@ -42,62 +43,68 @@ def parse_csv( file ):
     reader = csv.reader( open( file, 'rb' ) )
 
     line_no = 0
-    for disease in reader:
+    for csv_entry in reader:
         line_no += 1
 
-        if len( disease ) < 2:
-            errors.append( 'Line %d: Must have an ID ( can be blank )'
-                            ' and disease name' % ( line_no ) )
+        if len( csv_entry ) < 3:
+            errors.append( 'Line %d: Must have an ID ( can be blank ), name, and type identifier (e.g., \"Disease\")' % ( line_no ) )
             continue
 
-        disease_id          = disease[0].strip()
-        disease_name        = disease[1].strip().capitalize()
+        csv_entry_id          = csv_entry[0].strip()
+        csv_entry_name        = csv_entry[1].strip().capitalize()
+        csv_entry_typeid      = csv_entry[2].strip().capitalize()
 
-        if len( disease_name ) == 0:
-            errors.append( 'Line %d: Invalid Disease Name' % ( line_no ) )
+        if len( csv_entry_name ) == 0:
+            errors.append( 'Line %d: Name must NOT be empty!' % ( line_no ) )
             continue
 
-        disease_findings    = [ ':0.5' ]  # All diseases have a default weight.
-        if len( disease ) > 2:
-            disease_findings    = disease[2:]
+        if csv_entry_typeid not in EXPLANATION_TYPE_IDENTIFIERS:
+            errors.append( 'Line {}: Invalid type identifier \"{}\", must be one of {}'.format( line_no, csv_entry_typeid, EXPLANATION_TYPE_IDENTIFIERS) )
+            continue
 
-        has_id = len( disease_id ) != 0
+
+        if len( csv_entry ) > 3:
+            csv_entry_findings = csv_entry[2:]
+        else:
+            csv_entry_findings = [':0.5']
+
+        has_id = len( csv_entry_id ) != 0
 
         if has_id:
-            # Attempt to find disease from id
-            mongo_disease = None
+            # Attempt to find this key in the database from id
+            mongo_entry = None
             try:
-                mongo_query = Disease.query.filter(Disease.mongo_id == disease_id).first()
+                mongo_entry = Explanation.query.filter(Explanation.mongo_id == csv_entry_id).first()
             except Exception:
-                errors.append( 'Line %d: Invalid Disease ID' % ( line_no ) )
+                errors.append( 'Line %d: Invalid Explanation ID' % ( line_no ) )
                 continue
 
-            # If we have an invalid disease id, log the error and continue
-            if mongo_disease == None:
-                errors.append( 'Line %d: Invalid Disease ID' % ( line_no ) )
+            # If we have an invalid entry id, log the error and continue
+            if mongo_entry == None:
+                errors.append( 'Line %d: Failed to find ID %s in the database.  New entries should have blank ID field in csv file!' % ( line_no, csv_entry_id ) )
                 continue
 
             # Parse the findings
-            finding_parse_error, findings = _parse_findings( disease_findings,
+            finding_parse_error, finding_weights = _parse_findings( csv_entry_findings,
                                                              errors,
                                                              line_no )
 
             # Only save finding data if there are no errors parsing the
             # findings
             if not finding_parse_error and len( errors ) == 0:
-                mongo_disease.findings = findings
-                mongo_disease.save()
+                mongo_entry.findings = finding_weights
+                mongo_entry.save()
         else:
             # Parse the findings
-            finding_parse_error, findings = _parse_findings( disease_findings,
+            finding_parse_error, finding_weights = _parse_findings( csv_entry_findings,
                                                              errors,
                                                              line_no )
 
-            # Only save the new disease if there are no errors parsing the
+            # Only save the new entry if there are no errors parsing the
             # findings
             if not finding_parse_error and len( errors ) == 0:
-                mongo_disease = Disease( name=disease_name )
-                mongo_disease.findings = findings
-                mongo_disease.save()
+                mongo_entry = Explanation( name=csv_entry_name )
+                mongo_entry.findings = finding_weights
+                mongo_entry.save()
 
     return errors

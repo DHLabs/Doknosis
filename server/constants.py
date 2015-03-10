@@ -1,3 +1,6 @@
+# Legal type identifiers for explanations
+EXPLANATION_TYPE_IDENTIFIERS = ['Drug','Disease']
+
 # Algorithm choice constants
 ALGO_HYBRID_1 = 1
 ALGO_HYBRID_2 = 2

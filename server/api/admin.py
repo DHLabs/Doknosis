@@ -5,7 +5,8 @@ from flask import Blueprint, request, render_template, redirect, flash
 from flask import send_from_directory
 from flask import current_app as app
 
-from server.db import Finding, Disease, FindingWeight
+from server.constants import EXPLANATION_TYPE_IDENTIFIERS
+from server.db import Finding, Explanation, FindingWeight
 from server.helpers import success, failure
 from server.helpers.data import parse_csv
 from werkzeug import secure_filename
@@ -23,14 +24,14 @@ def admin_index():
     '''
         admin_index
 
-        Returns the 10 latest diseases entered into the database
+        Returns the 10 latest explanations entered into the database
     '''
 
     page = int( request.args.get( 'page', 1 ) )
 
-    diseases = Disease.query.ascending( Disease.name ).paginate( page=page,
+    explanations = Explanation.query.ascending( Explanation.name ).paginate( page=page,
                      per_page=100 )
-    return render_template( '/admin/browse.html', pagination=diseases )
+    return render_template( '/admin/browse.html', pagination=explanations )
 
 
 @admin_api.route( '/csv_upload', methods=[ 'POST' ] )
@@ -70,33 +71,33 @@ def csv_download():
     '''
         csv_download
 
-        Queries the database for ALL diseases and returns the results as a
-        CSV to be edited. The CSV will be sorted by disease name.
+        Queries the database for ALL explanations and returns the results as a
+        CSV to be edited. The CSV will be sorted by explanation name.
 
         The format in which the csv will as follows:
-        <disease id>, <disease name>, <finding 1>, <finding 2>, ...
+        <explanation id>, <explanation name>, <finding 1>, <finding 2>, ...
 
         The findings will be formatted as such:
         <finding name>:<finding weight>
 
         Thus for example, the following could be outputted as a CSV:
 
-        43ae01, Disease1, male:0.5, cough:1
-        43ae02, Disease2, cough:0.25, elderly:0.50, fever:0.25
+        43ae01, Explanation1, male:0.5, cough:1
+        43ae02, Explanation2, cough:0.25, elderly:0.50, fever:0.25
 
     '''
 
-    # Query all the diseases
-    diseases = Disease.query.ascending( Disease.name ).all()
+    # Query all the explanations
+    explanations = Explanation.query.ascending( Explanation.name ).all()
 
     # Write it out to a CSV file
     directory = os.path.join( app.config[ 'UPLOAD_FOLDER' ], 'doknosis.csv' )
     csvWriter = csv.writer( open( directory, 'wb' ) )
 
-    for disease in diseases:
-        row = [ disease.mongo_id, disease.name ]
+    for explanation in explanations:
+        row = [ explanation.mongo_id, explanation.name ]
 
-        for finding in disease.findings:
+        for finding in explanation.findings:
             row.append( '%s:%f' % ( finding.name, finding.weight ) )
 
         csvWriter.writerow( row )
@@ -106,9 +107,9 @@ def csv_download():
 
 
 @admin_api.route( '/manage', methods=[ 'GET' ] )
-def manage_diseases():
+def manage_explanations():
     '''
-        manage_diseases
+        manage_explanations
 
         Gives an admin the option of downloading the CSV database and/or
         uploading a CSV database to update current one.
@@ -116,93 +117,109 @@ def manage_diseases():
     return render_template( '/admin/manage.html' )
 
 
-@admin_api.route( '/add/disease', methods=[ 'GET' ] )
-def add_disease():
+@admin_api.route( '/add/explanation', methods=[ 'GET' ] )
+def add_explanation():
     '''
-        add_diseases
+        add_explanations
 
-        Adds a disease to the database ( if it doesn't already exist ).
-        Redirects to the edit page with the new ( or existing ) disease.
+        Adds a explanation to the database ( if it doesn't already exist ).
+        Redirects to the edit page with the new ( or existing ) explanation.
 
-        @param name - Disease name
+        @param name - Explanation name
     '''
-    disease_name = request.args.get( 'name' ).strip().capitalize()
+    explanation_name = request.args.get( 'name' ).strip().capitalize()
+    explanation_type_id = request.args.get( 'type_identifier' ).strip().capitalize()
 
-    # Query the database for the disease information
-    disease = Disease.query.filter( {'name': disease_name} ).first()
+    if explanation_type_id not in EXPLANATION_TYPE_IDENTIFIERS:
+        return failure('Invalid explanation type {} (must be one of {})!'.format(explanation_type_id,EXPLANATION_TYPE_IDENTIFIERS))
+
+    # Query the database for the explanation information
+    explanation = Explanation.query.filter( {'name': explanation_name} ).first()
     findings = []
 
     # Check to see if it already exists.
-    if disease is None:
-        disease = Disease( name=disease_name )
-        disease.save()
+    if explanation is None:
+        explanation = Explanation( name=explanation_name, type_identifier=explanation_type_id )
+        explanation.save()
     else:
-        # If the diseases exists, create a findings list to show on the
+        if explanation.type_identifier != explanation_type_id:
+            return failure('Explanation with name {} already exists, but type in database is {}, not {}!'.format(explanation_name, 
+                                                                                                                  explanation.type_identifier,
+                                                                                                                  explanation_type_id))
+        # If the explanations exists, create a findings list to show on the
         # edit page
-        findings_list = disease.findings
+        findings_list = explanation.findings
         findings = [ x.to_dict() for x in findings_list ]
 
-    return render_template( 'edit.html', disease=disease, findings=findings )
+    return render_template( 'edit.html', explanation=explanation, findings=findings )
 
 
-@admin_api.route( '/save/disease/<disease_id>' )
-def save_disease( disease_id ):
+@admin_api.route( '/save/explanation/<explanation_id>' )
+def save_explanation( explanation_id ):
     '''
-        save_disease
+        save_explanation
 
-        Create a disease if it doesn't already exist
+        Create a explanation if it doesn't already exist
 
-        @param name - Disease name
+        @param name - Explanation name
     '''
-    disease_name = request.args.get( 'name', None )
-    if disease_name is None:
-        return failure( 'Invalid Disease Name' )
+    explanation_name = request.args.get( 'name', None )
+    if explanation_name is None:
+        return failure( 'Invalid Explanation Name' )
+    explanation_name = explanation_name.strip().capitalize()
 
-    disease_name = disease_name.strip().capitalize()
+    explanation_type_id = request.args.get( 'type_identifier', None )
+    if explanation_type_id is None:
+        return failure( 'Invalid Explanation Type' )
+    explanation_type_id = explanation_type_id.strip().capitalize()
+    if explanation_type_id not in EXPLANATION_TYPE_IDENTIFIERS:
+        return failure('Invalid explanation type {} (must be one of {})!'.format(explanation_type_id,EXPLANATION_TYPE_IDENTIFIERS))
+
 
     try:
-        disease = Disease.query.filter(Disease.mongo_id == disease_id).first()
+        explanation = Explanation.query.filter(Explanation.mongo_id == explanation_id).first()
     except Exception:
-        return failure( 'Invalid Disease ID' )
+        return failure( 'Invalid Explanation ID' )
 
-    if disease is None:
-        return failure( 'Invalid Disease ID' )
+    if explanation is None:
+        return failure( 'Invalid Explanation ID' )
 
-    disease.name = disease_name
-    disease.save()
+    explanation.name = explanation_name
+    explanation.type_identifier = explanation_type_id
+    explanation.save()
 
     return success()
 
 
-@admin_api.route( '/delete/disease/<disease_id>', methods=[ 'GET' ] )
-def delete_disease( disease_id ):
+@admin_api.route( '/delete/explanation/<explanation_id>', methods=[ 'GET' ] )
+def delete_explanation( explanation_id ):
     '''
-        delete_disease
+        delete_explanation
 
-        Deletes a disease from the database
+        Deletes a explanation from the database
 
-        @param disease_id - Disease MongoDB id
+        @param explanation_id - Explanation MongoDB id
     '''
     try:
-        disease = Disease.query.filter(Disease.mongo_id == disease_id).first()
+        explanation = Explanation.query.filter(Explanation.mongo_id == explanation_id).first()
     except Exception:
-        # Invalid disease id, just send back to admin page.
+        # Invalid explanation id, just send back to admin page.
         return redirect( '/admin' )
 
-    if disease is not None:
-        disease.remove()
+    if explanation is not None:
+        explanation.remove()
 
     return redirect( '/admin' )
 
 
-@admin_api.route( '/add/<disease_id>/finding', methods=[ 'POST' ] )
-def add_finding( disease_id ):
+@admin_api.route( '/add/<explanation_id>/finding', methods=[ 'POST' ] )
+def add_finding( explanation_id ):
     '''
         add_finding
 
-        Add a finding ( name & weight ) to a disease
+        Add a finding ( name & weight ) to a explanation
 
-        @param disease_id   - Disease MongoDB id
+        @param explanation_id   - Explanation MongoDB id
         @param name         - Finding name
         @param weight       - Finding weight
     '''
@@ -217,8 +234,8 @@ def add_finding( disease_id ):
     except ValueError:
         return failure( 'Invalid Finding Weight' )
 
-    # Find the disease to add this finding too
-    disease = Disease.query.filter( Disease.mongo_id == disease_id ).first()
+    # Find the explanation to add this finding too
+    explanation = Explanation.query.filter( Explanation.mongo_id == explanation_id ).first()
 
     # Check our findings list to see if we have this finding already or not
     finding = Finding.query.filter( Finding.name == finding_name ).first()
@@ -228,15 +245,15 @@ def add_finding( disease_id ):
         finding = Finding( name=finding_name )
         finding.save()
 
-    # Add this finding to the disease
-    disease.findings.append(FindingWeight( name=finding_name, weight=weight ))
-    disease.save()
+    # Add this finding to the explanation
+    explanation.findings.append(FindingWeight( name=finding_name, weight=weight ))
+    explanation.save()
 
     return success()
 
 
-@admin_api.route( '/delete/<disease_id>/finding/', methods=[ 'POST' ] )
-def delete_empty_finding( disease_id ):
+@admin_api.route( '/delete/<explanation_id>/finding/', methods=[ 'POST' ] )
+def delete_empty_finding( explanation_id ):
     '''
         delete_empty_finding
 
@@ -244,35 +261,35 @@ def delete_empty_finding( disease_id ):
         CSV ) This method helps alleviate that corner case. Calls
         delete_finding with an empty finding_id
 
-        @param disease_id - Disease MongoDB id
+        @param explanation_id - Explanation MongoDB id
     '''
-    return delete_finding( disease_id, '' )
+    return delete_finding( explanation_id, '' )
 
 
-@admin_api.route('/delete/<disease_id>/finding/<finding_id>', methods=['POST'])
-def delete_finding( disease_id, finding_id ):
+@admin_api.route('/delete/<explanation_id>/finding/<finding_id>', methods=['POST'])
+def delete_finding( explanation_id, finding_id ):
     '''
         delete_finding
 
-        Deletes a finding from a disease instance
+        Deletes a finding from a explanation instance
 
-        @param disease_id - Disease MongoDB id
+        @param explanation_id - Explanation MongoDB id
         @param finding_id - Finding id
     '''
     try:
-        disease = Disease.query.filter(Disease.mongo_id == disease_id).first()
+        explanation = Explanation.query.filter(Explanation.mongo_id == explanation_id).first()
     except Exception:
-        return failure( 'Invalid Disease ID' )
+        return failure( 'Invalid Explanation ID' )
 
     # Find finding and remove it
-    for find in disease.findings:
+    for find in explanation.findings:
         if find.name == finding_id:
-            disease.findings.remove( find )
+            explanation.findings.remove( find )
             break
-    disease.save()
+    explanation.save()
 
     # Also check if this finding no longer exists in the db.
-    count = Disease.query.filter({'findings.name': finding_id}).count()
+    count = Explanation.query.filter({'findings.name': finding_id}).count()
     if count == 0:
         # Remove from findings list
         finding = Finding.query.filter( Finding.name == finding_id ).first()
@@ -281,17 +298,17 @@ def delete_finding( disease_id, finding_id ):
     return success()
 
 
-@admin_api.route( '/edit/<disease_id>')
-def edit_disease( disease_id ):
+@admin_api.route( '/edit/<explanation_id>')
+def edit_explanation( explanation_id ):
     '''
-        edit_disease
+        edit_explanation
 
-        Queries a disease by its MongoDB id and returns the edit page for that
-        disease.
+        Queries a explanation by its MongoDB id and returns the edit page for that
+        explanation.
 
-        @param disease_id - Disease MongoDB id
+        @param explanation_id - Explanation MongoDB id
     '''
-    disease = Disease.query.filter( Disease.mongo_id == disease_id ).first()
-    findings = [ x.to_dict() for x in disease.findings ]
+    explanation = Explanation.query.filter( Explanation.mongo_id == explanation_id ).first()
+    findings = [ x.to_dict() for x in explanation.findings ]
 
-    return render_template( 'edit.html', disease=disease, findings=findings )
+    return render_template( 'edit.html', explanation=explanation, findings=findings )

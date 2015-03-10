@@ -12,20 +12,20 @@
 
 	<script type='text/javascript'>
 		$( function() {
-			$( "#diseases" ).autocomplete({
-				source: '/api/disease/autocomplete',
+			$( "#explanations" ).autocomplete({
+				source: '/api/explanation/autocomplete',
 				select: function(event, ui) {
 			    	window.location = '/admin/edit/' + ui.item.id;
 				}
 			});
 	 	});
 
-	 	function add_disease() {
-	 		var dname = $( '#diseases' ).val();
+	 	function add_explanation() {
+	 		var dname = $( '#explanations' ).val();
 	 		if( dname.length == 0 ) {
-	 			alert( 'Please enter a disease name in the textbox first!' );
+	 			alert( 'Please enter the name of an explanatory variable in the textbox first!' );
 	 		} else {
-	 			window.location = '/admin/add/disease?name=' + encodeURIComponent( $( '#diseases' ).val() );
+	 			window.location = '/admin/add/explanation?name=' + encodeURIComponent( $( '#explanations' ).val() );
 	 		}
 	 	}
 	 </script>
@@ -42,10 +42,10 @@
 				</ul>
 				<div class='navbar-form'>
 					<div class='pull-left'>
-						<input type='text' tabindex='1' class='span5' id='diseases' placeholder='Type disease name to begin!'>
+						<input type='text' tabindex='1' class='span5' id='explanations' placeholder='Type explanatory variable name to begin!'>
 					</div>
 					<div class='pull-left'>
-						<button class='btn btn-primary' tabindex='2' onclick='add_disease();'>Add Disease</button>
+						<button class='btn btn-primary' tabindex='2' onclick='add_explanation();'>Add</button>
 					</div>
 				</div>
 			</div>

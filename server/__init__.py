@@ -38,9 +38,11 @@ def create_app( settings='server.settings.Dev' ):
     return MAIN
 
 
-def get_algorithm_results( knowns, findings, num_solutions=10,
-                                             num_combinations=1,
-                                             algorithm=ALGO_HYBRID_1 ):
+def get_algorithm_results( knowns, findings, 
+                           num_solutions=10,
+                           num_combinations=1,
+                           type_identifier="Diseases",
+                           algorithm=ALGO_HYBRID_1 ):
     '''
     Required:
         knowns           - What are demographics or key findings that this
@@ -53,6 +55,8 @@ def get_algorithm_results( knowns, findings, num_solutions=10,
                             [ default: 10 ]
         num_combinations - How many disease combinations (n) to account for
                             [ default: 1 ]
+        type_identifier  - Which explanations to take into account (Drugs, Diseases, any other?)
+                            [ default: Diseases ]
         algorithm        - What algorithm to choose to run
                             [ default: ALGO_HYBRID_1 ]
     '''
@@ -70,6 +74,7 @@ def get_algorithm_results( knowns, findings, num_solutions=10,
 
             query_time, solutions = run_hybrid_1( knowns, findings,
                                                 num_combinations=combinations,
+                                                type_identifier=type_identifier,
                                                 num_solutions=num_solutions )
             greedy, other_sols = solutions
             results[ 'query_time' ] = ' %0.3f' % ( query_time )
@@ -81,8 +86,9 @@ def get_algorithm_results( knowns, findings, num_solutions=10,
 
         #There can be multiple solutions to this particular query
         greedy, other_sols = run_hybrid_2( knowns, findings,
-                                            num_combinations=num_combinations,
-                                            num_solutions=num_solutions )
+                                           num_combinations=num_combinations,
+                                           type_identifier=type_identifier,
+                                           num_solutions=num_solutions )
 
         results[ 'greedy' ]  = greedy
         results[ 'other' ] = other_sols
@@ -91,8 +97,9 @@ def get_algorithm_results( knowns, findings, num_solutions=10,
     elif algorithm == ALGO_BAYESIAN:
 
         greedy, other_sols = run_bayesian( knowns, findings,
-                                            num_combinations=num_combinations,
-                                            num_solutions=num_solutions )
+                                           num_combinations=num_combinations,
+                                           type_identifier=type_identifier,
+                                           num_solutions=num_solutions )
 
         results[ 'greedy' ]  = greedy
         results[ 'other' ] = other_sols
@@ -116,15 +123,17 @@ def get_result():
 
     num_solutions    = int( request.args.get( 'num_solutions' ) )
     num_combinations = int( request.args.get( 'num_combinations' ) )
+    type_identifier = request.args.get( 'type_identifier' )
     algorithm        = int( request.args.get( 'algorithm' ) )
 
     # TODO: Support other algorithms
     algorithm = 1
 
     results = get_algorithm_results( None, findings,
-                                    num_solutions=num_solutions,
-                                    num_combinations=num_combinations,
-                                    algorithm=algorithm )
+                                     num_solutions=num_solutions,
+                                     num_combinations=num_combinations,
+                                     type_identifier=type_identifier,
+                                     algorithm=algorithm )
     results[ 'success' ] = True
     return json.dumps( results )
 
