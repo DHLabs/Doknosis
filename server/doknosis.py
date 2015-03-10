@@ -29,7 +29,14 @@
 #
 #   in runDiagnosis method:
 # 1) Is LCS a better distance metric than something like damerau_levenshtein_distance?  I haven't compared.
+# 2) Are the target findings double checked against actual entries in our EO dictionary outside of this context?  There should be
+#    an autocomplete on the webform and findings should not be admitted if they are not in the dictionary.  Otherwise we might end up inferring
+#    a completely erroneous finding and giving bogus results which are only identifiable if the user happens to notice the wierd finding.
 
+# Higher level stuff
+# 1) I still don't understand what the function being optimized is supposed to be.  This is not a probability or likelihood.  
+#    Maybe log(p(X)), where X is normally distributed?
+# 2) Wait, what?  There's no pentalty for picking too many explanations?
 
 import sys
 from lcs import strdiff, lenLCS
@@ -37,11 +44,11 @@ from lcs import strdiff, lenLCS
 OR_G = {}
 
 def value(expl, target, r, tau=0.7, eprev = lambda s: 1, gamma = lambda s: 1):
-    """ Calculate explanitory coverage for target observations.
+    """ Calculate explanatory coverage for target observations.
 
     Given a vector of explanations and target observations,
     generate a "coverage" vector, which is the sum over all
-    explanations of the explanitory weight for each observation.  Also
+    explanations of the explanatory weight for each observation.  Also
     returns the ratio of observations which exceed a coverage
     threshold.
 
@@ -66,14 +73,14 @@ def ddtor(dd):
     Given a dictionary, dd, such that dd[explanation][observation] is a weight (if defined),
     generate a function that returns that weight (or zero if undefined).
 
-    @param dd dictionary of explanitory weights
+    @param dd dictionary of explanatory weights
     """
     return lambda o,e: dd[e][o] if dd[e].has_key(o) else 0
 
 def greedy(target, E, r,
            taus=[0.7, 0.5, 0.3, 0.05],
            eprev = lambda s: 1, gamma = lambda s: 1):
-    """ Generate a list of minimal explanations which provide the best coverage of the observations using a greedy method.
+    """ Generate a list of explanations which provide the best coverage of the observations using a greedy method.
 
     @param target list of target observations
     @param E list of possible (expected?) explanations

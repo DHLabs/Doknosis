@@ -20,13 +20,13 @@ def _parse_findings( disease_findings, errors, line_no ):
                 weight = float(spl[-1])
                 if weight > 1 or weight < 0:
                     # If a finding has an invalid prevalence number, spit out a warning and ignore it.
-                    print('Warning -- Finding \"{}\", prevalence weight ({}) not in [0,1].  Ignoring this finding.'.format(name,weight))
+                    errors.append('Warning -- Finding \"{}\", prevalence weight ({}) not in [0,1].  Ignoring this finding.'.format(name,weight))
                     finding_parse_error = True
                     break
 
             except ValueError:
                 # If prevalence value is not a probability, skip this finding!
-                print('Warning -- Finding \"{}\", prevalence weight ({}) not a number.  Ignoring this finding.'.format(name,spl[-1]))
+                errors.append('Warning -- Finding \"{}\", prevalence weight ({}) not a number.  Ignoring this finding.'.format(name,spl[-1]))
                 finding_parse_error = True
                 break
 
@@ -99,4 +99,5 @@ def parse_csv( file ):
                 disease = Disease( name=disease_name )
                 disease.findings = findings
                 disease.save()
+
     return errors
