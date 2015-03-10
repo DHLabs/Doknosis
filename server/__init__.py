@@ -9,7 +9,7 @@ from flask import Flask, request, render_template
 
 # Import API functions
 from server.api.admin import admin_api
-from server.api.diseases import diseases_api
+from server.api.explanations import explanations_api
 from server.api.findings import findings_api
 
 from server.algos import run_hybrid_1, run_hybrid_2, run_bayesian
@@ -32,7 +32,7 @@ def create_app( settings='server.settings.Dev' ):
 
     # Register apis
     MAIN.register_blueprint( findings_api,  url_prefix='/api/finding' )
-    MAIN.register_blueprint( diseases_api,  url_prefix='/api/disease' )
+    MAIN.register_blueprint( explanations_api,  url_prefix='/api/explanation' )
     MAIN.register_blueprint( admin_api,     url_prefix='/admin' )
 
     return MAIN
@@ -46,14 +46,14 @@ def get_algorithm_results( knowns, findings,
     '''
     Required:
         knowns           - What are demographics or key findings that this
-                            disease must be associated with
+                            explanatory variable must be associated with
         findings         - What are demographics that we want to associate
-                            with our disease
+                            with our explanatory variable
 
     Optional:
         num_solutions    - How many solutions (m) to print in our list
                             [ default: 10 ]
-        num_combinations - How many disease combinations (n) to account for
+        num_combinations - How many explanatory variable combinations (n) to account for
                             [ default: 1 ]
         type_identifier  - Which explanations to take into account (Drugs, Diseases, any other?)
                             [ default: Diseases ]
@@ -65,7 +65,7 @@ def get_algorithm_results( knowns, findings,
 
     # Run the current greedy Staal algorithm
     if algorithm == ALGO_HYBRID_1:
-        # If n_disease_combinations is greater than 1, create multiple tables.
+        # If n_combinations is greater than 1, create multiple tables.
         # Say user chooses 3, then create tables for 1, 2 and 3.
         results[ 'greedy' ] = []
         results[ 'other' ]  = []
