@@ -20,13 +20,13 @@ def _parse_findings( disease_findings, errors, line_no ):
                 weight = float(spl[-1])
                 if weight > 1 or weight < 0:
                     # If a finding has an invalid prevalence number, spit out a warning and ignore it.
-                    errors.append('Warning -- Finding \"{}\", prevalence weight ({}) not in [0,1].  Ignoring this finding.'.format(name,weight))
+                    errors.append('Finding \"{}\", prevalence weight ({}) not in [0,1].'.format(name,weight))
                     finding_parse_error = True
                     break
 
             except ValueError:
                 # If prevalence value is not a probability, skip this finding!
-                errors.append('Warning -- Finding \"{}\", prevalence weight ({}) not a number.  Ignoring this finding.'.format(name,spl[-1]))
+                errors.append('Finding \"{}\", prevalence weight ({}) not a number.'.format(name,spl[-1]))
                 finding_parse_error = True
                 break
 
@@ -65,15 +65,15 @@ def parse_csv( file ):
 
         if has_id:
             # Attempt to find disease from id
-            disease = None
+            mongo_disease = None
             try:
-                disease = Disease.query.filter(Disease.mongo_id == disease_id)
+                mongo_query = Disease.query.filter(Disease.mongo_id == disease_id).first()
             except Exception:
                 errors.append( 'Line %d: Invalid Disease ID' % ( line_no ) )
                 continue
 
             # If we have an invalid disease id, log the error and continue
-            if disease == None:
+            if mongo_disease == None:
                 errors.append( 'Line %d: Invalid Disease ID' % ( line_no ) )
                 continue
 
@@ -85,8 +85,8 @@ def parse_csv( file ):
             # Only save finding data if there are no errors parsing the
             # findings
             if not finding_parse_error and len( errors ) == 0:
-                disease.findings = findings
-                disease.save()
+                mongo_disease.findings = findings
+                mongo_disease.save()
         else:
             # Parse the findings
             finding_parse_error, findings = _parse_findings( disease_findings,
@@ -96,8 +96,8 @@ def parse_csv( file ):
             # Only save the new disease if there are no errors parsing the
             # findings
             if not finding_parse_error and len( errors ) == 0:
-                disease = Disease( name=disease_name )
-                disease.findings = findings
-                disease.save()
+                mongo_disease = Disease( name=disease_name )
+                mongo_disease.findings = findings
+                mongo_disease.save()
 
     return errors

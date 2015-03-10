@@ -51,7 +51,7 @@ def csv_upload():
 
         # Now process the sucker!
         errors = parse_csv( tmp_file )
-        # print errors
+        print errors
 
         if len( errors ) > 0:
             for error in errors:
