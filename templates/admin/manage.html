@@ -103,21 +103,5 @@
 
 			</div>
 		</div>
-		<div class="row">
-		  <form class='form-vertical well' action='/admin/delete_all_of_type' method='POST' enctype='multipart/form-data'>
-		    <li>
-		      <strong>WARNING!  There is no way to undo this!  If you REALLY want to delete all explanatory variable entries of a given type, push this button...</strong>
-		    </li>
-		    <div>
-		      <label>Type</label>
-		      <select id="type_identifier" class="drop_down">
-			<option value="Diseases">Diseases</option>
-			<option value="Drugs">Drugs</option>
-			<option value="All">All</option>
-		      </select>
-		    </div>
-		    <button type='submit' class='btn btn-primary'>DELETE ALL ENTRIES!</button>
-		  </form>
-		</div>
 	</div>
 {% endblock %}

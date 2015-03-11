@@ -320,35 +320,3 @@ def edit_explanation( explanation_id ):
 
     return render_template( 'edit.html', explanation=explanation, findings=findings )
 
-
-@admin_api.route('/delete_all_of_type', methods=['POST'])
-def delete_all_of_type( ):
-    '''
-        delete_all_of_type
-
-        Deletes all explanation entries of given type (specified by drop-down menu)
-
-    '''
-
-    explanation_type_id = request.args.get( 'type_identifier' )
-    if explanation_type_id is None:
-        return failure('Tried to delete all with no type specified!')
-
-    explanation_type_id = explanation_type_id.strip().capitalize()
-
-    # Query the database for the explanation information
-    if explanation_type_id in EXPLANATION_TYPE_IDENTIFIERS:
-        explanations = Explanation.query.filter( {'type_identifier':explanation_type_id} )
-    elif explanation_type_id == 'All':
-        explanations = Explanation.query.filter()
-    else:
-        return failure('Tried to delete all explanations of type {} (must be one of {})!'.format(explanation_type_id,EXPLANATION_TYPE_IDENTIFIERS+['All']))
-
-    # This is a test:
-    return failure('Would have deleted {} entries!'.format(len(explanations)))
-
-    for explanation in explanations:
-        if explanation is not None:
-            explanation.remove()
-
-    return success()

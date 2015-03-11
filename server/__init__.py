@@ -127,7 +127,7 @@ def get_result():
     algorithm        = int( request.args.get( 'algorithm' ) )
 
     # TODO: Support other algorithms
-    algorithm = 1
+    algorithm = ALGO_HYBRID_1
 
     results = get_algorithm_results( None, findings,
                                      num_solutions=num_solutions,
