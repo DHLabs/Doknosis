@@ -43,6 +43,8 @@ def parse_csv( file ):
 
     reader = csv.reader( open( file, 'rb' ) )
 
+    print "parse_csv -- loading file"
+
     line_no = 0
     for csv_entry in reader:
         line_no += 1

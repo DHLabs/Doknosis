@@ -20,7 +20,7 @@
 				<div class='span12' id='edit'>
 					{% for explanation in pagination.items %}
 					<div style='padding:8px;'>
-						<div><a href='/admin/edit/{{explanation.mongo_id}} ({{explanation.type_identifier}})'>{{explanation.name}}</a></div>
+						<div><a href='/admin/edit/{{explanation.mongo_id}}'>{{explanation.name}} ({{explanation.type_identifier}})</a></div>
 						<div>
 						{% for finding in explanation.findings %}
 							{{ finding.name }}[{{finding.weight}}],
