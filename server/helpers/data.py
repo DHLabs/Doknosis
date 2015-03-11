@@ -11,7 +11,6 @@ def _parse_findings( raw_finding_strings, errors, line_no ):
 
     # Parse the findings
     for finding_string in raw_finding_strings:
-        print('parsing finding {}'.format(finding_string))
         finding_components=finding_string.split(':')
         if len(finding_components) < 2:
             # Ignore any finding which does not have an associated prevalence.  Assume these are just comments, so we will not return an error.
@@ -43,14 +42,9 @@ def parse_csv( file ):
 
     reader = csv.reader( open( file, 'rb' ) )
 
-    print "parse_csv -- loading file"
-
     line_no = 0
     for csv_entry in reader:
         line_no += 1
-
-        print('Loading entry {}'.format(csv_entry))
-
         if len( csv_entry ) < 3:
             errors.append( 'Line %d: Must have an ID ( can be blank ), name, and type identifier (e.g., \"Disease\")' % ( line_no ) )
             continue
@@ -76,7 +70,6 @@ def parse_csv( file ):
         has_id = len( csv_entry_id ) != 0
 
         if has_id:
-            print('Has ID {}'.format(csv_entry_id))
             # Attempt to find this key in the database from id
             mongo_entry = None
             try:
@@ -101,7 +94,6 @@ def parse_csv( file ):
                 mongo_entry.findings = finding_weights
                 mongo_entry.save()
         else:
-            print('Parsing entry with no id')
             # Parse the findings
             finding_parse_error, finding_weights = _parse_findings( csv_entry_findings,
                                                              errors,
@@ -110,7 +102,7 @@ def parse_csv( file ):
             # Only save the new entry if there are no errors parsing the
             # findings
             if not finding_parse_error and len( errors ) == 0:
-                mongo_entry = Explanation( name=csv_entry_name )
+                mongo_entry = Explanation( name=csv_entry_name, type_identifier=csv_entry_typeid )
                 mongo_entry.findings = finding_weights
                 mongo_entry.save()
 

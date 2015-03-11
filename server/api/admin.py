@@ -50,7 +50,6 @@ def csv_upload():
         tmp_file = os.path.join( app.config[ 'UPLOAD_FOLDER' ], filename )
         file.save( tmp_file )
 
-        print "parsing file now"
         # Now process the sucker!
         errors = parse_csv( tmp_file )
         print errors
@@ -58,6 +57,7 @@ def csv_upload():
         if len( errors ) > 0:
             for error in errors:
                 flash( error, 'error' )
+            failure(errors)
         else:
             flash( 'File uploaded and parsed successfully!', 'success' )
 
