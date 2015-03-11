@@ -14,6 +14,16 @@ from werkzeug import secure_filename
 admin_api = Blueprint( 'admin_api', __name__ )
 
 
+def remove_finding_if_unused( finding_name ):
+    ''' Delete the given finding if it's no longer in any explanation dictionaries.
+    '''
+    # Also check if this finding no longer exists in the db.
+    count = Explanation.query.filter({'findings.name': finding_name}).count()
+    if count == 0:
+        # Remove from findings list
+        finding = Finding.query.filter( Finding.name == finding_name ).first()
+        finding.remove()
+
 def allowed_file( filename ):
     return '.' in filename and \
         filename.rsplit( '.', 1 )[1] in app.config[ 'ALLOWED_EXTENSIONS' ]
@@ -214,6 +224,11 @@ def delete_explanation( explanation_id ):
         return redirect( '/admin' )
 
     if explanation is not None:
+        for finding_weights in explanation.findings:
+            finding_name = finding_weights.name
+            finding_weights.remove( find )
+            remove_finding_if_unused( finding_name )
+
         explanation.remove()
 
     return redirect( '/admin' )
@@ -295,12 +310,7 @@ def delete_finding( explanation_id, finding_id ):
             break
     explanation.save()
 
-    # Also check if this finding no longer exists in the db.
-    count = Explanation.query.filter({'findings.name': finding_id}).count()
-    if count == 0:
-        # Remove from findings list
-        finding = Finding.query.filter( Finding.name == finding_id ).first()
-        finding.remove()
+    remove_finding_if_unused( finding_id )
 
     return success()
 

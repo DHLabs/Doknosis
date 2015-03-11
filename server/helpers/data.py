@@ -1,6 +1,6 @@
 import csv
 
-from server.db import Explanation, FindingWeight
+from server.db import Explanation, FindingWeight, Finding
 from server.constants import EXPLANATION_TYPE_IDENTIFIERS
 
 
@@ -16,23 +16,22 @@ def _parse_findings( raw_finding_strings, errors, line_no ):
             # Ignore any finding which does not have an associated prevalence.  Assume these are just comments, so we will not return an error.
             continue
         else:
-            name = ':'.join(finding_components[:-1]).lower()
+            finding_name = ':'.join(finding_components[:-1]).lower()
             try:
                 weight = float(finding_components[-1])
                 if weight > 1 or weight < 0:
                     # If a finding has an invalid prevalence number, spit out a warning and ignore it.
-                    errors.append('Finding \"{}\", prevalence weight ({}) not in [0,1].'.format(name,weight))
+                    errors.append('Finding \"{}\", prevalence weight ({}) not in [0,1].'.format(finding_name,weight))
                     finding_parse_error = True
                     break
 
             except ValueError:
                 # If prevalence value is not a probability, skip this finding!
-                errors.append('Finding \"{}\", prevalence weight ({}) not a number.'.format(name,finding_components[-1]))
+                errors.append('Finding \"{}\", prevalence weight ({}) not a number.'.format(finding_name,finding_components[-1]))
                 finding_parse_error = True
                 break
 
-        finding_weights.append( FindingWeight( name=name, weight=weight ) )
-
+        finding_weights.append( FindingWeight( name=finding_name, weight=weight ) )
 
     return ( finding_parse_error, finding_weights )
 
@@ -93,6 +92,7 @@ def parse_csv( file ):
             if not finding_parse_error and len( errors ) == 0:
                 mongo_entry.findings = finding_weights
                 mongo_entry.save()
+                add_findings(finding_weights)
         else:
             # Parse the findings
             finding_parse_error, finding_weights = _parse_findings( csv_entry_findings,
@@ -105,5 +105,13 @@ def parse_csv( file ):
                 mongo_entry = Explanation( name=csv_entry_name, type_identifier=csv_entry_typeid )
                 mongo_entry.findings = finding_weights
                 mongo_entry.save()
+                add_findings(finding_weights)
 
     return errors
+
+def add_findings_for_explanation(finding_weights):
+    # After we add an explanation, make sure the finding strings are in the database
+    for finding_weight in finding_weights:
+        if Finding.query.filter( {'name': finding_weight.name} ).count() == 0:
+            finding = Finding( name=finding_weight.name )
+            finding.save()
