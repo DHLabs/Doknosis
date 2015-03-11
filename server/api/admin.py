@@ -128,7 +128,12 @@ def add_explanation():
         @param name - Explanation name
     '''
     explanation_name = request.args.get( 'name' ).strip().capitalize()
-    explanation_type_id = request.args.get( 'type_identifier' ).strip().capitalize()
+    explanation_type_id = request.args.get( 'type_identifier' )
+    if explanation_type_id is None:
+        # Default starting point
+        explanation_type_id = 'Disease'
+    else:
+        explanation_type_id = explanation_type_id.strip().capitalize()
 
     if explanation_type_id not in EXPLANATION_TYPE_IDENTIFIERS:
         return failure('Invalid explanation type {} (must be one of {})!'.format(explanation_type_id,EXPLANATION_TYPE_IDENTIFIERS))
