@@ -17,12 +17,13 @@ admin_api = Blueprint( 'admin_api', __name__ )
 def remove_finding_if_unused( finding_name ):
     ''' Delete the given finding if it's no longer in any explanation dictionaries.
     '''
-    # Also check if this finding no longer exists in the db.
+    # Check if this finding no longer exists in the db.
     count = Explanation.query.filter({'findings.name': finding_name}).count()
     if count == 0:
         # Remove from findings list
         finding = Finding.query.filter( Finding.name == finding_name ).first()
-        finding.remove()
+        if finding is not None:
+            finding.remove()
 
 def allowed_file( filename ):
     return '.' in filename and \
@@ -62,13 +63,12 @@ def csv_upload():
 
         # Now process the sucker!
         errors = parse_csv( tmp_file )
-        print errors
+        if len(errors):
+            print errors
 
         if len( errors ) > 0:
-            for error in errors:
-                flash( error, 'error' )
-            # For some reason flash() is not working right now.  For now I'll just use failure()
-            failure(errors)
+            for err in errors:
+                flash(err,'error')
         else:
             flash( 'File uploaded and parsed successfully!', 'success' )
 
@@ -160,9 +160,9 @@ def add_explanation():
         explanation.save()
     else:
         if explanation.type_identifier != explanation_type_id:
-            return failure('Explanation with name {} already exists, but type in database is {}, not {}!'.format(explanation_name, 
-                                                                                                                  explanation.type_identifier,
-                                                                                                                  explanation_type_id))
+            return failure('Explanation with name {} already exists, but type in database is {}, not {}!'.format(explanation_name,
+                                                                                                                 explanation.type_identifier,
+                                                                                                                 explanation_type_id))
         # If the explanations exists, create a findings list to show on the
         # edit page
         findings_list = explanation.findings
@@ -180,28 +180,35 @@ def save_explanation( explanation_id ):
 
         @param name - Explanation name
     '''
+
     explanation_name = request.args.get( 'name', None )
     if explanation_name is None:
-        return failure( 'Invalid Explanation Name' )
+        return failure( 'No Explanation Name' )
+
     explanation_name = explanation_name.strip().capitalize()
 
     explanation_type_id = request.args.get( 'type_identifier', None )
     if explanation_type_id is None:
-        return failure( 'Invalid Explanation Type' )
+        return failure( 'No Explanation Type' )
+
     explanation_type_id = explanation_type_id.strip().capitalize()
+
     if explanation_type_id not in EXPLANATION_TYPE_IDENTIFIERS:
         return failure('Invalid explanation type {} (must be one of {})!'.format(explanation_type_id,EXPLANATION_TYPE_IDENTIFIERS))
-
 
     try:
         explanation = Explanation.query.filter(Explanation.mongo_id == explanation_id).first()
     except Exception:
-        return failure( 'Invalid Explanation ID' )
+        return failure( 'Exception querying database for explanation' )
 
     if explanation is None:
-        return failure( 'Invalid Explanation ID' )
+        return failure( 'Failed to find explanation in database' )
 
     explanation.name = explanation_name
+    if explanation.type_identifier != explanation_type_id:
+        print 'Changing Explanation Type To {}'.format(explanation_type_id)
+
+
     explanation.type_identifier = explanation_type_id
     explanation.save()
 
@@ -224,12 +231,10 @@ def delete_explanation( explanation_id ):
         return redirect( '/admin' )
 
     if explanation is not None:
-        for finding_weights in explanation.findings:
-            finding_name = finding_weights.name
-            finding_weights.remove( find )
-            remove_finding_if_unused( finding_name )
-
+        finding_names = [fw.name for fw in explanation.findings]
         explanation.remove()
+        [remove_finding_if_unused( fn ) for fn in finding_names]
+
 
     return redirect( '/admin' )
 
@@ -248,19 +253,28 @@ def add_finding( explanation_id ):
     finding_name = request.form.get( 'name', None )
 
     if finding_name is None:
-        return failure( 'Invalid Finding Name' )
+        return failure('Invalid Finding Name')
 
     finding_name = finding_name.strip().lower()
     try:
         weight       = float( request.form[ 'weight' ] )
     except ValueError:
-        return failure( 'Invalid Finding Weight' )
+        return failure('Invalid Finding Weight')
 
     # Find the explanation to add this finding too
-    explanation = Explanation.query.filter( Explanation.mongo_id == explanation_id ).first()
+    try:
+        explanation = Explanation.query.filter( Explanation.mongo_id == explanation_id ).first()
+    except Exception:
+        return failure('Error loading explanation from database')
+
+    if explanation is None:
+        return failure('Error loading explanation from database')
 
     # Check our findings list to see if we have this finding already or not
-    finding = Finding.query.filter( Finding.name == finding_name ).first()
+    try:
+        finding = Finding.query.filter( Finding.name == finding_name ).first()
+    except Exception:
+        return failure('Database error!')
 
     # Add this finding to the findings list
     if finding is None:
@@ -301,7 +315,7 @@ def delete_finding( explanation_id, finding_id ):
     try:
         explanation = Explanation.query.filter(Explanation.mongo_id == explanation_id).first()
     except Exception:
-        return failure( 'Invalid Explanation ID' )
+        return failure('Invalid Explanation ID')
 
     # Find finding and remove it
     for find in explanation.findings:

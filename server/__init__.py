@@ -12,7 +12,7 @@ from server.api.admin import admin_api
 from server.api.explanations import explanations_api
 from server.api.findings import findings_api
 
-from server.algos import run_hybrid_1, run_hybrid_2, run_bayesian
+from server.algos import run_hybrid_1, run_hybrid_2, run_bayesian, AlgoError
 from server.cache import cache
 from server.constants import ALGO_BAYESIAN, ALGO_HYBRID_1, ALGO_HYBRID_2
 from server.db import db, mongo, Finding
@@ -41,7 +41,7 @@ def create_app( settings='server.settings.Dev' ):
 def get_algorithm_results( knowns, findings, 
                            num_solutions=10,
                            num_combinations=1,
-                           type_identifier="Diseases",
+                           type_identifier="Disease",
                            algorithm=ALGO_HYBRID_1 ):
     '''
     Required:
@@ -55,8 +55,8 @@ def get_algorithm_results( knowns, findings,
                             [ default: 10 ]
         num_combinations - How many explanatory variable combinations (n) to account for
                             [ default: 1 ]
-        type_identifier  - Which explanations to take into account (Drugs, Diseases, any other?)
-                            [ default: Diseases ]
+        type_identifier  - Which explanations to take into account (Drug, Disease, any other?)
+                            [ default: Disease ]
         algorithm        - What algorithm to choose to run
                             [ default: ALGO_HYBRID_1 ]
     '''
@@ -129,12 +129,18 @@ def get_result():
     # TODO: Support other algorithms
     algorithm = ALGO_HYBRID_1
 
-    results = get_algorithm_results( None, findings,
-                                     num_solutions=num_solutions,
-                                     num_combinations=num_combinations,
-                                     type_identifier=type_identifier,
-                                     algorithm=algorithm )
-    results[ 'success' ] = True
+    try:
+        results = get_algorithm_results( None, findings,
+                                         num_solutions=num_solutions,
+                                         num_combinations=num_combinations,
+                                         type_identifier=type_identifier,
+                                         algorithm=algorithm )
+        results[ 'success' ] = True
+
+    except AlgoError as er:
+        print 'Error!  {}'.format(er.msg)
+        results = {'success':False,'error':er.msg}
+
     return json.dumps( results )
 
 

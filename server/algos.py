@@ -6,6 +6,14 @@ from heapq import nlargest
 
 from server.db import Explanation
 
+class AlgoError(Exception):
+    """ Exception generated when something precludes algorithms from returning an acceptable result """
+    def __init__(self, msg):
+        self.msg = msg
+    def __str__(self):
+        return 'Error Running Diagnosis -- \"{}\"!'.format(self.msg)
+
+
 def combinations(iterable, r):
     # combinations('ABCD', 2) --> AB AC AD BC BD CD
     # combinations(range(4), 3) --> 012 013 023 123
@@ -116,6 +124,8 @@ def greedy(G, findings, measure):
             explanations.remove(best)
             sol += [best]
             bestQuality = value
+
+        # What the heck ... Pretty sure I have not changed this, but it looks like this greedy algo is returning in a pretty wierd place!!!
         return sol
 
 
@@ -158,10 +168,16 @@ def run_hybrid_1( knowns, findings, num_solutions=10, num_combinations=1, type_i
 
     # Filter by knowns
     t1 = time.time()
-    if type_identifier == "All":
-        explanations_list = Explanation.query.filter({ 'findings.name': {'$in': findings }}).all()    
-    else:
-        explanations_list = Explanation.query.filter({'type_identifier': {'==':type_identifier}}, { 'findings.name': {'$in': findings }}).all()
+    try:
+        if type_identifier == "All":
+            explanations_list = Explanation.query.filter({ 'findings.name': {'$in': findings }}).all()
+        else:
+            explanations_list = Explanation.query.filter({'type_identifier':type_identifier, 'findings.name': {'$in': findings }}).all()
+    except:
+        raise AlgoError('Database error in query for explanations of type {} with findings in {}!'.format(type_identifier,findings))
+
+    if len(explanations_list) == 0:
+        raise AlgoError('Database query for explanations of type {} with findings in {} turned up empty!'.format(type_identifier,findings))
 
     query_time = ( time.time() - t1 ) * 1000.0
 

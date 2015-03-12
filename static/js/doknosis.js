@@ -42,19 +42,21 @@ get_diagnosis = function() {
     algorithm: $('#algorithm').val()
   };
   $.getJSON('/diagnosis_result', params, function(data) {
-    var i, results_table, _i, _ref;
-    if (data.success === !true) {
-      return;
-    }
-    $('#query-time').html("DB QUERY TIME: " + data.query_time);
-    $('<div/>').addClass('diagnosis').html("<strong>Most Likely:</strong> " + data.greedy).appendTo('#results-list');
-    results_table = $('<table/>').addClass('results-table').addClass('table').addClass('table-striped').append('<tr><th>Name</th><th>Score</th></tr>');
-    for (i = _i = 0, _ref = data.other.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
-      $('<tr/>').append("<td> " + data.other[i][0] + " </td>").append("<td> " + data.other[i][1] + " </td>").appendTo(results_table);
-    }
-    toggle_loading();
-    results_table.appendTo('#results-list');
-    return $('#results').fadeIn();
+      var i, results_table, _i, _ref;
+      if (data.success === !true) {
+	  alert('Failure -- '+data.error)
+	  toggle_loading();
+	  return;
+      }
+      $('#query-time').html("DB QUERY TIME: " + data.query_time);
+      $('<div/>').addClass('diagnosis').html("<strong>Most Likely:</strong> " + data.greedy).appendTo('#results-list');
+      results_table = $('<table/>').addClass('results-table').addClass('table').addClass('table-striped').append('<tr><th>Name</th><th>Score</th></tr>');
+      for (i = _i = 0, _ref = data.other.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
+	  $('<tr/>').append("<td> " + data.other[i][0] + " </td>").append("<td> " + data.other[i][1] + " </td>").appendTo(results_table);
+      }
+      toggle_loading();
+      results_table.appendTo('#results-list');
+      return $('#results').fadeIn();
   });
   return this;
 };

@@ -17,7 +17,7 @@
 				{% with error_messages = get_flashed_messages(category_filter=['error']) %}
 				{% if error_messages %}
 					<div class='alert alert-error'>
-						<h4 class='alert-heading'>We had problems parsing your CSV file!</h4>
+						<h4 class='alert-heading'>We had some problems parsing your CSV file (any entries not represented below were successfully updated)!</h4>
 						{% for message in error_messages %}
 							<div>{{message}}</div>
 						{% endfor %}

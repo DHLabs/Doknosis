@@ -27,7 +27,7 @@
 		}
 
 		function save() {
-			$.get( '/admin/save/explanation/{{explanation.mongo_id}}', { 'name': $( '#explanation' ).val() }, { 'type_identifier': $( '#type_identifier' ).val() }, function( data ) {
+			$.get( '/admin/save/explanation/{{explanation.mongo_id}}', { 'name': $( '#explanation' ).val(), 'type_identifier': $( '#TypeIdSelect' ).val() }, function( data ) {
 				alert( 'Successfully saved!' );
 			} );
 		}
@@ -39,6 +39,10 @@
 				});
 			});
 		}
+
+		$(function() {
+		        $('#TypeIdSelect').val('{{explanation.type_identifier}}');
+		});
 
 		$( function() {
 			$( "#finding_name" ).autocomplete({
@@ -54,16 +58,36 @@
 			<div style='margin-bottom:16px;'>
 				<a class="brand" href="/admin">Back to Explanatory Variable list/search</a>
 			</div>
+			{% with messages = get_flashed_messages(category_filter=['success']) %}
+			{% if messages %}
+			<div class='alert alert-success'>
+			  <h4 class='alert-heading'>Database Changes Accepted!</h4>
+			  {% for message in messages %}
+			  <div>{{message}}</div>
+			  {% endfor %}
+			</div>
+			{% endif %}
+			{% endwith %}
+			{% with error_messages = get_flashed_messages(category_filter=['error']) %}
+			{% if error_messages %}
+			<div class='alert alert-error'>
+			  <h4 class='alert-heading'>Errors trying to save the changes!</h4>
+			  {% for message in error_messages %}
+			  <div>{{message}}</div>
+			  {% endfor %}
+			</div>
+			{% endif %}
+			{% endwith %}
+			<div>
+			  <label>Type</label>
+			  <select name="TypeIdSelect" id="TypeIdSelect" class="drop_down">
+			    <option value="Disease">Diseases</option>
+			    <option value="Drug">Drugs</option>
+			  </select>
+			</div>
 			<div class='row'>
 				<div class='span=8'>
 					<input type='text' class='span7' id='explanation' value='{{explanation.name}}' style='font-size:18px;padding:8px;'>
-				</div>
-				<div>
-				  <label>Type</label>
-				  <select id="type_identifier" class="drop_down">
-				    <option value="Diseases">Diseases</option>
-				    <option value="Drugs">Drugs</option>
-				  </select>
 				</div>
 				<div class='span4' style='text-align:right;'>
 					<button class='btn btn-primary' onclick='save();'>Save Changes</button>
