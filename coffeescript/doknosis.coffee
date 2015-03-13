@@ -1,4 +1,6 @@
-clear_all = () ->
+window.Diagnosis || = {}
+
+Diagnosis.clear_all = () ->
 	# Remove all symptons
 	window.symptoms = []
 	$( '.rm' ).fadeOut( 'fast', () ->
@@ -12,7 +14,7 @@ clear_all = () ->
 
 	@
 
-get_diagnosis = () ->
+Diagnosis.get_diagnosis = () ->
 	if window.symptoms.length == 0
 		alert 'Please enter some symptoms first!'
 		return
