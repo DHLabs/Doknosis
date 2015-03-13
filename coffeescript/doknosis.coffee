@@ -1,7 +1,3 @@
-toggle_loading = () ->
-	$( '#loading-indicator' ).toggle();
-	@
-
 clear_all = () ->
 	# Remove all symptons
 	window.symptoms = []
@@ -17,14 +13,13 @@ clear_all = () ->
 	@
 
 get_diagnosis = () ->
-
 	if window.symptoms.length == 0
 		alert 'Please enter some symptoms first!'
 		return
-
+	
 	$( '#results' ).hide()
 	$( '#results-list' ).html( '' )
-	toggle_loading()
+	$( '#loading-indicator' ).show()
 
 	if $( '#banner-bar' ).data( 'at_top' ) != true
 		$( '#banner-bar' ).data( 'at_top', true ).animate(
@@ -37,11 +32,14 @@ get_diagnosis = () ->
 		findings: 			window.symptoms.join( ',' )
 		num_solutions:  	$( '#num_solutions' ).val()
 		num_combinations:	$( '#num_combinations' ).val()
+		type_identifier:	$( '#type_identifier' ).val()
 		algorithm:			$( '#algorithm' ).val()
 
 	$.getJSON( '/diagnosis_result', params, ( data ) ->
 
 		if data.success is not true
+			alert 'Failure -- '+data.error
+			$( '#loading-indicator' ).hide()
 			return
 
 		$( '#query-time' ).html( "DB QUERY TIME: #{data.query_time}" )
@@ -57,13 +55,13 @@ get_diagnosis = () ->
 									   .addClass( 'table-striped' )
 									   .append( '<tr><th>Name</th><th>Score</th></tr>' )
 
-		for i in [0..data.other.length-1]
-			$( '<tr/>' ).append( "<td> #{data.other[i][0]} </td>" )
-						.append( "<td> #{data.other[i][1]} </td>" )
+		for dat in data.other
+			$( '<tr/>' ).append( "<td> #{dat[0]} </td>" )
+						.append( "<td> #{dat[1]} </td>" )
 						.appendTo( results_table )
 
 		# Hide loading indicator and display results table
-		toggle_loading()
+		$( '#loading-indicator' ).hide()
 		results_table.appendTo( '#results-list' )
 		$( '#results' ).fadeIn()
 	)
@@ -77,12 +75,9 @@ $ ->
 	$( document ).on( 'click', '.rm', () ->
 		id = $( @ ).data( 'sid' )
 
-		# Loop through and attempt to find matching id
-		for i in [0..window.symptoms.length-1]
-
-			if window.symptoms[ i ] == id
-				# Remove from array
-				window.symptoms.splice( i, 1 )
+		# Find and remove the symptom from js list
+		if window.symptoms.indexOf(id) != -1
+			window.symptoms.splice(window.symptoms.indexOf(id),1)
 
 		# Remove the label from the symptoms box
 		$( @parentNode ).fadeOut( 'fast', () ->
