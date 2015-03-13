@@ -113,7 +113,7 @@ def get_result():
     # e.g symptoms=1,2,3,4
 
     if request.args.get( 'findings' ) is None:
-        return json.dumps( { 'success': False } )
+        return json.dumps( { 'success': False, 'error':'Failed to load findings.' } )
 
     findings_list = request.args.get( 'findings' ).split( ',' )
     findings = []
