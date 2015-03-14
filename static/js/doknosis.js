@@ -11,19 +11,23 @@
     if ($('#symptoms-list > .help-text').length === 0) {
       $('#symptoms-list').append('<div class=\'help-text\'>No Symptoms Entered</div>');
     }
-    $('#results').hide();
+    $('#results').fadeOut();
     return this;
   };
 
   Diagnosis.get_diagnosis = function() {
     var params;
-    if (window.symptoms.length === 0) {
-      alert('Please enter some symptoms first!');
+    if ($('#loading-indicator').is(":visible")) {
+      window.diagnosis_refresh = true;
       return;
     }
-    $('#results').hide();
+    if (window.symptoms.length === 0) {
+      $('#results').fadeOut();
+      return;
+    }
+    $('#results').fadeOut();
     $('#results-list').html('');
-    $('#loading-indicator').show();
+    $('#loading-indicator').fadeIn();
     if ($('#banner-bar').data('at_top') !== true) {
       $('#banner-bar').data('at_top', true).animate({
         top: '0%',
@@ -54,35 +58,52 @@
       }
       $('#loading-indicator').hide();
       results_table.appendTo('#results-list');
-      return $('#results').fadeIn();
+      $('#results').fadeIn();
+      if (window.diagnosis_refresh) {
+        window.diagnosis_refresh = false;
+        return Diagnosis.get_diagnosis();
+      }
     });
     return this;
   };
 
   $(function() {
     window.symptoms = [];
+    window.diagnosis_refresh = false;
+    window.num_solutions.onchange = function() {
+      return Diagnosis.get_diagnosis();
+    };
+    window.num_combinations.onchange = function() {
+      return Diagnosis.get_diagnosis();
+    };
+    window.algorithm.onchange = function() {
+      return Diagnosis.get_diagnosis();
+    };
+    window.type_identifier.onchange = function() {
+      return Diagnosis.get_diagnosis();
+    };
     $(document).on('click', '.rm', function() {
       var id;
       id = $(this).data('sid');
       if (window.symptoms.indexOf(id) !== -1) {
         window.symptoms.splice(window.symptoms.indexOf(id), 1);
+        Diagnosis.get_diagnosis();
+        return $(this.parentNode).fadeOut('fast', function() {
+          $(this).remove();
+          if ($('#symptoms-list > .label').length === 0) {
+            return $('#symptoms-list').append('<div class=\'help-text\'>No Symptoms Entered</div>');
+          }
+        });
       }
-      return $(this.parentNode).fadeOut('fast', function() {
-        $(this).remove();
-        if ($('#symptoms-list > .label').length === 0) {
-          return $('#symptoms-list').append('<div class=\'help-text\'>No Symptoms Entered</div>');
-        }
-      });
     });
     $("#symptoms").autocomplete({
       source: '/api/finding/autocomplete',
       select: function(event, ui) {
-        var text;
-        text = ui.item.label;
         ui.item.value = '';
         $('#symptoms-list > .help-text').remove();
-        $('#symptoms-list').append('<span class="label"><span>' + text + '</span><span data-sid="' + ui.item.id + '" class="rm">x</span></span>');
-        return window.symptoms.push(ui.item.id);
+        $('#symptoms-list').append('<span class="label"><span>' + ui.item.label + '</span><span data-sid="' + ui.item.id + '" class="rm">x</span></span>');
+        window.symptoms.push(ui.item.id);
+        return Diagnosis.get_diagnosis();
       }
     });
     return this;

@@ -10,18 +10,26 @@ Diagnosis.clear_all = () ->
 
 	if $( '#symptoms-list > .help-text' ).length == 0
 		$( '#symptoms-list' ).append( '<div class=\'help-text\'>No Symptoms Entered</div>' )
-	$( '#results' ).hide();
+	$( '#results' ).fadeOut();
 
 	@
 
 Diagnosis.get_diagnosis = () ->
+	# Don't start another one if it's already running (not sure if it would)
+	if $( '#loading-indicator' ).is(":visible")
+		window.diagnosis_refresh = true
+		return
+
 	if window.symptoms.length == 0
-		alert 'Please enter some symptoms first!'
+		$( '#results' ).fadeOut();
+		# Don't bother with messages.  It's expected that this function will be
+		# called when options change regardless of the status of the symptom list.
+		# alert 'Please enter some symptoms first!'
 		return
 	
-	$( '#results' ).hide()
+	$( '#results' ).fadeOut()
 	$( '#results-list' ).html( '' )
-	$( '#loading-indicator' ).show()
+	$( '#loading-indicator' ).fadeIn()
 
 	if $( '#banner-bar' ).data( 'at_top' ) != true
 		$( '#banner-bar' ).data( 'at_top', true ).animate(
@@ -66,44 +74,61 @@ Diagnosis.get_diagnosis = () ->
 		$( '#loading-indicator' ).hide()
 		results_table.appendTo( '#results-list' )
 		$( '#results' ).fadeIn()
+		if window.diagnosis_refresh
+			# If another diagnosis was requested (maybe parameters changed) while
+			# we were running this one, kick off a new one immediately.
+			window.diagnosis_refresh = false
+			Diagnosis.get_diagnosis()
 	)
 	@
 
 $ ->
 	# List of symptons to submit
 	window.symptoms = []
+	window.diagnosis_refresh = false
 
-	# Remove symptom from list
+	# Trigger new diagnosis when parameters change
+	window.num_solutions.onchange = () ->
+		Diagnosis.get_diagnosis()
+	window.num_combinations.onchange = () ->
+		Diagnosis.get_diagnosis()
+	window.algorithm.onchange = () ->
+		Diagnosis.get_diagnosis()
+	window.type_identifier.onchange = () ->
+		Diagnosis.get_diagnosis()
+
+
+	# This is triggered when user clicks the close button on one of the symptoms in the symptom window (remove symptom from view and local list, trigger new diagnosis)
 	$( document ).on( 'click', '.rm', () ->
 		id = $( @ ).data( 'sid' )
 
 		# Find and remove the symptom from js list
 		if window.symptoms.indexOf(id) != -1
 			window.symptoms.splice(window.symptoms.indexOf(id),1)
+			Diagnosis.get_diagnosis()
+			
+			# Remove the label from the symptoms box
+			$( @parentNode ).fadeOut( 'fast', () ->
 
-		# Remove the label from the symptoms box
-		$( @parentNode ).fadeOut( 'fast', () ->
+				$( @ ).remove()
 
-			$( @ ).remove()
-
-			# If this is the last label in the symptons box, add the
-			# "No Symptoms Entered" help-text into the box.
-			if $( '#symptoms-list > .label' ).length == 0
-				$( '#symptoms-list' ).append( '<div class=\'help-text\'>No Symptoms Entered</div>' )
-		)
+				# If this is the last label in the symptons box, add the
+				# "No Symptoms Entered" help-text into the box.
+				if $( '#symptoms-list > .label' ).length == 0
+					$( '#symptoms-list' ).append( '<div class=\'help-text\'>No Symptoms Entered</div>' )
+			)
 	)
 
 	$( "#symptoms" ).autocomplete(
 		source: '/api/finding/autocomplete',
 		select: ( event, ui ) ->
-			text = ui.item.label
 			ui.item.value = ''
 
 			$( '#symptoms-list > .help-text' ).remove()
-			$( '#symptoms-list' ).append( '<span class="label"><span>' + text +
+			$( '#symptoms-list' ).append( '<span class="label"><span>' + ui.item.label +
 				'</span><span data-sid="' + ui.item.id + '" class="rm">x</span></span>' )
-
 			window.symptoms.push( ui.item.id )
+			Diagnosis.get_diagnosis()
 	)
 
 	@
