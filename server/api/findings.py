@@ -57,7 +57,7 @@ def finding_autocomplete():
     if term is None:
         return json.dumps( [] )
 
-    findings = Finding.query.filter( {'name': { '$regex': '^%s' % (term) } } )\
+    findings = Finding.query.filter( {'name': { '$regex': '%s' % (term) } } )\
                 .limit( 25 )\
                 .ascending( Finding.name )\
                 .all()
