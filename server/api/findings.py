@@ -12,6 +12,7 @@ from server.db import Finding
 
 findings_api = Blueprint( 'findings_api', __name__ )
 
+AUTOCOMPLETE_MAX_LENGTH = 25
 
 @findings_api.route( '/list', methods=['GET'] )
 @cache.cached( timeout=60 )
@@ -59,7 +60,6 @@ def finding_autocomplete():
 
     # Query the database for matching strings
     findings = Finding.query.filter( {'name': { '$regex': '%s' % (term) } } )\
-                .limit( 25 )\
                 .ascending( Finding.name )\
                 .all()
 
@@ -71,4 +71,5 @@ def finding_autocomplete():
                       'value':finding.name} 
                      for finding in sorted(findings,key=lambda xx:xx.name.rjust(maxl).replace(term,''))]
 
-    return json.dumps( json_findings )
+    # Have to cut off to max length here instead of in query because the perfect match might be the last one in the list.
+    return json.dumps( json_findings[0:AUTOCOMPLETE_MAX_LENGTH-1] )
