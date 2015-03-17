@@ -57,17 +57,18 @@ def finding_autocomplete():
     if term is None:
         return json.dumps( [] )
 
+    # Query the database for matching strings
     findings = Finding.query.filter( {'name': { '$regex': '%s' % (term) } } )\
                 .limit( 25 )\
                 .ascending( Finding.name )\
                 .all()
 
-    # Convert into an JSON object
-    json_findings = []
-    for finding in findings:
-        info = { 'id':       str( finding.mongo_id ),
-                 'label':    finding.name,
-                 'value':    finding.name }
-        json_findings.append( info )
+    # Next, we sort the output by how close they are to just the string we found.
+    # Do this by removing the match and sorting the rest (with right justificatoin to give precidence to shorter mismatches.
+    maxl = max([len(xx.name) for xx in findings])
+    json_findings = [{'id':str(finding.mongo_id),
+                      'label':finding.name,
+                      'value':finding.name} 
+                     for finding in sorted(findings,key=lambda xx:xx.name.rjust(maxl).replace(term,''))]
 
     return json.dumps( json_findings )
