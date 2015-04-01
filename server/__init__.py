@@ -96,11 +96,13 @@ def get_algorithm_results( knowns, findings,
     # Run Eli's algorithm
     elif algorithm == ALGO_BAYESIAN:
 
-        greedy, other_sols = run_bayesian( knowns, findings,
-                                           num_combinations=num_combinations,
-                                           type_identifier=type_identifier,
-                                           num_solutions=num_solutions )
+        query_time, solutions = run_bayesian( knowns, findings,
+                                              num_combinations=num_combinations,
+                                              type_identifier=type_identifier,
+                                              num_solutions=num_solutions )
 
+        greedy, other_sols = solutions
+        results[ 'query_time'] = ' %0.3f' % (query_time)
         results[ 'greedy' ]  = greedy
         results[ 'other' ] = other_sols
 

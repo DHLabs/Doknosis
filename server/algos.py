@@ -1,10 +1,11 @@
 import sys
 import time
 
-from operator import or_,itemgetter
+from operator import mul,or_,itemgetter
 from heapq import nlargest
-
 from server.db import Explanation
+
+DEFAULT_TYPE_IDENTIFIER = 'infectious disease'
 
 class AlgoError(Exception):
     """ Exception generated when something precludes algorithms from returning an acceptable result """
@@ -12,6 +13,27 @@ class AlgoError(Exception):
         self.msg = msg
     def __str__(self):
         return 'Error Running Diagnosis -- \"{}\"!'.format(self.msg)
+
+def fetch_exp_for_findings(type_identifier,findings):
+    """ For a type identifier and given set of findings, fetch all of the correctly typed explanations which name the findings.
+
+    @param type_identifier String identifying the type of explanatory variable, or "All" for all types.
+    @param findings List of finding names to use in query filter.
+    """
+    try:
+        if type_identifier == "All":
+            explanations_list = Explanation.query.filter({ 'findings.name': {'$in': findings }}).all()
+        else:
+            explanations_list = Explanation.query.filter({'type_identifier':type_identifier, 'findings.name': {'$in': findings }}).all()
+    except:
+        raise AlgoError('Database error in query for explanations of type {} with findings in {}!'.format(type_identifier,findings))
+
+    # Special cases for any explanation that has findings with zero or one conditional
+    # ffunc = lambda expl: not(any([xx.weight == 1.0 and xx.name not in findings for xx in expl.findings]) or 
+    #                          any([xx.weight == 0 and xx.name in findings for xx in expl.findings]))
+    ffunc = lambda expl: not(any([xx.weight == 0 and xx.name in findings for xx in expl.findings]))
+    return filter(ffunc,explanations_list)
+    # return explanations_list
 
 
 def combinations(iterable, r):
@@ -57,22 +79,29 @@ def createMeasure( explanation_map, findings, w = lambda x: 1, f = lambda x: 1, 
     The greater the number the better
     '''
 
-    #Returns all findings - uncovered findings(covered findings = union of findings that the set of explanations cover)
-    #the bigger the number the better here
+    # Returns all findings - uncovered findings(covered findings = union of findings that the set of explanations cover)
+    # the bigger the number the better here
     
-    #List of findings covered (with edges to) explanations = reduce(or_,[set(G[e]) for e in explanations],set()
-    #len(findings - list_of_findings) = list of all findings not covered by explanations = not_covered
-    #so len(findings) - len(not_covered)) = length of covered findings
+    # List of findings covered (with edges to) explanations = reduce(or_,[set(G[e]) for e in explanations],set()
+    # len(findings - list_of_findings) = list of all findings not covered by explanations = not_covered
+    # so len(findings) - len(not_covered)) = length of covered findings
     a = 1
     b = 1
 
-    lambdaFunc = (lambda explanations: a * (len(findings) - len(findings - reduce(or_,[set( explanation_map[ e ].keys() ) for e in explanations],set())))
-                  + b * (strengthFunc( explanation_map, explanations, findings)) 
+    # measure: a * (n - n_nc) + b*strength()
+
+    lambdaFunc = (lambda explanations: 
+                  a * (len(findings) - len(findings - reduce(or_,[set( explanation_map[ e ].keys() ) for e in explanations],set())))
+                  + b * (strengthFunc( explanation_map, explanations, findings))
                   )
     return lambdaFunc
 
 
 def strengthFunc( explanation_map, explanations, findings):
+    """ This seems to be where the probability part of the score comes in.
+
+    For each explanation e, let w_e+ denote the maximum finding weight (over the given set of findings).  Return Prod_e w_e+.
+    """
     explanations_to_finding_weight = []
     
     for explanation in explanations:
@@ -154,7 +183,7 @@ def tupleToDict(list_of_tuples):
 
     return explanations_to_prob_dict
 
-def run_hybrid_1( knowns, findings, num_solutions=10, num_combinations=1, type_identifier="Disease" ):
+def run_hybrid_1( knowns, findings, num_solutions=10, num_combinations=1, type_identifier=DEFAULT_TYPE_IDENTIFIER ):
     '''
     Vinterbo Country, find best solution for findings in G using Greedy and Measure
 
@@ -168,14 +197,8 @@ def run_hybrid_1( knowns, findings, num_solutions=10, num_combinations=1, type_i
 
     # Filter by knowns
     t1 = time.time()
-    try:
-        if type_identifier == "All":
-            explanations_list = Explanation.query.filter({ 'findings.name': {'$in': findings }}).all()
-        else:
-            explanations_list = Explanation.query.filter({'type_identifier':type_identifier, 'findings.name': {'$in': findings }}).all()
-    except:
-        raise AlgoError('Database error in query for explanations of type {} with findings in {}!'.format(type_identifier,findings))
 
+    explanations_list = fetch_exp_for_findings(type_identifier,findings)
     if len(explanations_list) == 0:
         raise AlgoError('Database query for explanations of type {} with findings in {} turned up empty!'.format(type_identifier,findings))
 
@@ -204,19 +227,20 @@ def run_hybrid_1( knowns, findings, num_solutions=10, num_combinations=1, type_i
     sizeN_sol_dict = tupleToDict( sizeN_sol )
 
     ranked_sizeN_m_sol = rank_probs( sizeN_sol_dict, num_solutions )
-    
+
     results =  ( greedy_sol, ranked_sizeN_m_sol )
 
     return ( query_time, results )
 
-def run_hybrid_2( knowns, findings, num_solutions=10, num_combinations=1, type_identifier="Disease" ):
+def run_hybrid_2( knowns, findings, num_solutions=10, num_combinations=1, type_identifier=DEFAULT_TYPE_IDENTIFIER ):
     # Filter by knowns
     # explanations_all  = Explanation.query.all()
-    if type_identifier == "Any":
-        explanations_list = Explanation.query.filter({ 'findings.name': {'$in': findings }}).all()
-    else:
-        # I think there's a cleaner way to do this, but trying not to mess with what's already here.
-        explanations_list = Explanation.query.filter({'type_identifier': {'==':type_identifier}}, { 'findings.name': {'$in': findings }}).all()
+
+    t1 = time.time()
+    explanations_list = fetch_exp_for_findings(type_identifier,findings)
+    if len(explanations_list) == 0:
+        raise AlgoError('Database query for explanations of type {} with findings in {} turned up empty!'.format(type_identifier,findings))
+    query_time = ( time.time() - t1 ) * 1000.0
 
     # Convert from list to hashmap
     for explanation in explanations_list:
@@ -230,5 +254,34 @@ def run_hybrid_2( knowns, findings, num_solutions=10, num_combinations=1, type_i
     return None
         
 
-def run_bayesian( knowns, findings, num_solutions=10, num_combinations=1, type_identifier="Disease" ):
-    pass
+def run_bayesian( knowns, findings, num_solutions=10, num_combinations=1, type_identifier=DEFAULT_TYPE_IDENTIFIER ):
+    """ Simple Naive Bayes approach.
+
+    Probably an oversimplification, but the basic Naive Bayes strategy is to just multiply all the conditionals and
+    the prior.  The prior should probably be the probability of the explanation given the demographics.  Conditionals
+    are given by edge weights, or assumed to be .5 if not given.
+
+    This does not seem to work very well.  I think it is because it gives far too much weight to the missing edges.
+    I don't think the conditional estimates in the database really represent what we think they do, or maybe it is
+    just that the missing data is not what we think it is.
+
+    """
+
+    t1 = time.time()
+    explanations_list = fetch_exp_for_findings(type_identifier,findings)
+    if len(explanations_list) == 0:
+        raise AlgoError('Database query for explanations of type {} with findings in {} turned up empty!'.format(type_identifier,findings))
+    query_time = ( time.time() - t1 ) * 1000.0
+
+    if num_solutions < len(explanations_list):
+        num_solutions = len(explanations_list)
+
+    # At some point, this prior should be generated from demographic data:
+    prior = {expl.name:.5 for expl in explanations_list}
+    posteriors = {expl.name:prior[expl.name]*reduce(mul,[expl.findings_dict().get(fi,0.5) for fi in findings]) for expl in explanations_list}
+
+    # Next we sort them and take the ones with highest probability
+    ranked = rank_probs(posteriors, num_solutions)
+
+    # Ignore the combinations for now.
+    return (query_time, (ranked[0][0],ranked))
