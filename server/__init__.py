@@ -5,7 +5,7 @@ import time
 # import doknosis
 # import parseFile
 
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template,flash
 
 # Import API functions
 from server.api.admin import admin_api
@@ -15,7 +15,7 @@ from server.api.findings import findings_api
 from server.algos import run_hybrid_1, run_hybrid_2, run_bayesian, AlgoError
 from server.cache import cache
 from server.constants import ALGO_BAYESIAN, ALGO_HYBRID_1, ALGO_HYBRID_2
-from server.db import db, mongo, Finding
+from server.db import mongo, Finding
 
 # Flask components
 MAIN  = Flask( __name__, static_folder='../static',
@@ -26,7 +26,7 @@ def create_app( settings='server.settings.Dev' ):
     MAIN.config.from_object( settings )
 
     # Initialize db/cache with app
-    db.init_app( MAIN )
+    # db.init_app( MAIN )
     cache.init_app( MAIN )
     mongo.init_app( MAIN )
 
@@ -117,18 +117,25 @@ def get_result():
     if request.args.get( 'findings' ) is None:
         return json.dumps( { 'success': False, 'error':'Failed to load findings.' } )
 
-    findings_list = request.args.get( 'findings' ).split( ',' )
-    findings = []
-    for find in findings_list:
-        tmp = Finding.query.filter( Finding.mongo_id == find ).first()
-        findings.append( tmp.name )
+    findings = request.args.get( 'findings' ).split( ',' )
+
+    # We were previously checking for these guys in the database, but since the autocomplete comes
+    # from there, this should be unnecessary.
+    # try:
+    #     db_findings = Finding.query.filter({ 'name': {'$in': request.args.get( 'findings' ).split( ',' ) }}).all()
+    # except Exception as e:
+    #     raise AlgoError('Database error trying to match findings: {}'.format(e))
+
+    # findings = [dbf.name for dbf in db_findings]
+
+    # if len(findings) != len(finding_list):
+    #     flash('Findings not in database: {}'.format(set(findings_list)-set(findings)),'error')
 
     num_solutions    = int( request.args.get( 'num_solutions' ) )
     num_combinations = int( request.args.get( 'num_combinations' ) )
     type_identifier = request.args.get( 'type_identifier' )
     algorithm        = int( request.args.get( 'algorithm' ) )
 
-    # TODO: Support other algorithms
     algorithm = ALGO_HYBRID_1
 
     try:
@@ -140,7 +147,7 @@ def get_result():
         results[ 'success' ] = True
 
     except AlgoError as er:
-        print 'Error!  {}'.format(er.msg)
+        flash('Error!  {}'.format(er.msg),'error')
         results = {'success':False,'error':er.msg}
 
     return json.dumps( results )

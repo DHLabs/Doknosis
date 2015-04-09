@@ -4,6 +4,13 @@
 	<div class="container" style='background:#FFF;padding:16px;'>
 		<div class='row'>
 			<div class='span12'>
+				{% with error_messages = get_flashed_messages(category_filter=['delete']) %}
+				{% if error_messages %}
+					<div class='alert alert-error'>
+						<h4 class='alert-heading'>All Data Deleted!</h4>
+					</div>
+				{% endif %}
+				{% endwith %}
 				{% with messages = get_flashed_messages(category_filter=['success']) %}
 				{% if messages %}
 					<div class='alert alert-success'>
@@ -26,6 +33,10 @@
 				{% endwith %}
 				<div style='margin-bottom:32px;'>
 					<a href='/admin/csv_download' class='btn btn-primary'>Download Editable CSV</a>
+					<a href='/admin/delete_all' class='btn btn-primary' method='POST'>Clear Entire Database!!!</a>
+					<!-- <button action='submit' type='submit' class='btn btn-primary'></button> -->
+					<!-- <form action='/admin/delete_all' method='POST'> -->
+					<!-- </form> -->
 				</div>
 				<form class='form-vertical well' action='/admin/csv_upload' method='POST' enctype='multipart/form-data'>
 					<input type='file' name='file' class='span3'>

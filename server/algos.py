@@ -25,8 +25,8 @@ def fetch_exp_for_findings(type_identifier,findings):
             explanations_list = Explanation.query.filter({ 'findings.name': {'$in': findings }}).all()
         else:
             explanations_list = Explanation.query.filter({'type_identifier':type_identifier, 'findings.name': {'$in': findings }}).all()
-    except:
-        raise AlgoError('Database error in query for explanations of type {} with findings in {}!'.format(type_identifier,findings))
+    except Exception as e:
+        raise AlgoError('Database error in query for explanations of type {} with findings in {}: {}'.format(type_identifier,findings,e))
 
     # Special cases for any explanation that has findings with zero or one conditional
     # ffunc = lambda expl: not(any([xx.weight == 1.0 and xx.name not in findings for xx in expl.findings]) or 

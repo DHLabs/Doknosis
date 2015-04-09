@@ -91,6 +91,16 @@
 					<div style='margin-top:16px;'>Retrieving Diagnosis...</div>
 				</div>
 			</div>
+			{% with error_messages = get_flashed_messages(category_filter=['error']) %}
+			{% if error_messages %}
+			<div class='alert alert-error'>
+			  <h4 class='alert-heading'>Errors trying to run diagnostic algorithm!</h4>
+			  {% for message in error_messages %}
+			  <div>{{message}}</div>
+			  {% endfor %}
+			</div>
+			{% endif %}
+			{% endwith %}
 			<div class='row'>
 				<div id='results' class='span12'>
 					<div style='padding:16px;'>

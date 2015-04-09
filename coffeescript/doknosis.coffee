@@ -127,7 +127,7 @@ $ ->
 			$( '#symptoms-list > .help-text' ).remove()
 			$( '#symptoms-list' ).append( '<span class="label"><span>' + ui.item.label +
 				'</span><span data-sid="' + ui.item.id + '" class="rm">x</span></span>' )
-			window.symptoms.push( ui.item.id )
+			window.symptoms.push( ui.item.label )
 			Diagnosis.get_diagnosis()
 	)
 

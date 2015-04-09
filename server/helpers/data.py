@@ -1,6 +1,6 @@
 import csv
 
-from server.db import Explanation, FindingWeight, Finding
+from server.db import Explanation
 from server.constants import EXPLANATION_TYPE_IDENTIFIERS
 
 
@@ -31,17 +31,17 @@ def _parse_findings( raw_finding_strings, errors, line_no ):
                 weight = float(finding_components[-1])
                 if weight > 1 or weight < 0:
                     # If a finding has an invalid prevalence number, spit out a warning and ignore it.
-                    errors.append('Finding \"{}\", prevalence weight ({}) not in [0,1].'.format(finding_name,weight))
+                    errors.append('Row {}: Finding \"{}\", prevalence weight ({}) not in [0,1].'.format(line_no, finding_name,weight))
                     finding_parse_error = True
                     break
 
             except ValueError:
                 # If prevalence value is not a probability, skip this finding!
-                errors.append('Finding \"{}\", prevalence weight ({}) not a number.'.format(finding_name,finding_components[-1]))
+                errors.append('Row {}: Finding \"{}\", prevalence weight ({}) not a number.'.format(line_no, finding_name,finding_components[-1]))
                 finding_parse_error = True
                 break
 
-        finding_weights.append( FindingWeight( name=finding_name, weight=weight ) )
+        finding_weights.append( {'name':finding_name, 'weight':weight} )
 
     return ( finding_parse_error, finding_weights )
 
@@ -66,6 +66,10 @@ def parse_csv( file ):
     errors = []
 
     reader = csv.reader( open( file, 'rb' ) )
+
+    # Gather operations for bulk updates.  Keep track as a dictionary so that we just overwrite any previous guys with the
+    # same name and type.
+    update_explanations = {}
 
     line_no = 0
     for csv_entry in reader:
@@ -112,83 +116,8 @@ def parse_csv( file ):
         if finding_parse_error:
             continue
 
-        db_entry = None
+        update_explanations[csv_entry_name+csv_entry_typeid] = {'name':csv_entry_name,'type_identifier':csv_entry_typeid,'findings':finding_weights}
 
-        # Check to see if an id was specified.
-        if len( csv_entry_id ) != 0:
-            match_error, db_entry = match_db_entry(compare_id=csv_entry_id,compare_name=csv_entry_name,compare_type=csv_entry_typeid)
-            # If there was a database error looking for the id, let's just treat it as not found, moving on to search by name.
-            if match_error and db_entry is not None:
-                errors.append('Row {}: ID {} in database is \"{}\" ({}), but csv has \"{}\" ({})!  Skipping this row!'.format(line_no, csv_entry_id,db_entry.name,db_entry.type_identifier,csv_entry_name,csv_entry_typeid))
-                continue
-
-
-        # If we did not find our entry by ID, we next check to see if it is in there by name.
-        if db_entry is None:
-            match_error, db_entry = match_db_entry(compare_name=csv_entry_name,compare_type=csv_entry_typeid)
-            if match_error:
-                if db_entry is None:
-                    errors.append('Row {}: Database error while looking for explanatory variable with name {}.  Skipping this row to avoid redundant entries!'.format(line_no, csv_entry_name))
-                else:
-                    errors.append('Row {}: Database entry \"{}\" has type {}, but type is {} in csv file!  Skipping this row!'.format(line_no,csv_entry_name,db_entry.type_identifier,csv_entry_typeid))
-                continue
-
-
-        # Once we get here, we either have a matching db_entry, or we have to create one.
-        if db_entry is None:
-            db_entry = Explanation(name=csv_entry_name, type_identifier=csv_entry_typeid)
-            if db_entry is None:
-                errors.append('Row {}: Failed to create database entry for explanatory variable {} with type {}!  Skipping this row!'.format(line_no,csv_entry_name,csv_entry_typeid))
-                continue
-        
-        db_entry.findings = finding_weights
-        db_entry.save()
-        add_findings(finding_weights)
+    Explanation.bulk_update(update_explanations.values())
 
     return errors
-
-def match_db_entry(compare_name,compare_type,compare_id=None):
-    ''' Query the database for an entry with the given characteristics.
-
-    Query uses only id or name (if id is None), then tests the value of name and type against the result.
-
-    @param compare_id If specified, we use this for the query.
-    @param compare_name If compare_id not specified, use this for query.  Test resulting db_entry.name against this.
-    @param compare_type Test resulting db_entry.type_identifier against this.
-
-    @returns match_error(boolean),db_entry(what we found).  Note on return conditions:
-            match_error    db_entry     description
-            True           None         Database error in query
-            False          None         Query returned None
-            True           not None     Mismatch between input and database entry
-            False          not None     Found a matching entry
-    '''
-
-    db_entry = None
-    if compare_id is not None:
-        # Attempt to find this key in the database by id
-        try:
-            # TODO Should probably abstract "mongo" out of this at some point!
-            db_entry = Explanation.query.filter(Explanation.mongo_id == compare_id).first()
-        except Exception:
-            return True,None
-    else:
-        # Attempt to find this key in the database by name
-        try:
-            db_entry = Explanation.query.filter(Explanation.name == compare_name).first()
-        except Exception:
-            return True,None
-
-    if db_entry is not None:
-        if db_entry.name != compare_name or db_entry.type_identifier != compare_type:
-            return True,db_entry
-
-    return False,db_entry
-
-
-def add_findings(finding_weights):
-    # After we add an explanation, make sure the finding strings are in the database
-    for finding_weight in finding_weights:
-        if Finding.query.filter( {'name': finding_weight.name} ).count() == 0:
-            finding = Finding(name=finding_weight.name)
-            finding.save()

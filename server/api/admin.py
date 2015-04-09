@@ -1,29 +1,17 @@
-import csv
-import os
+import csv,os,time,json
 
 from flask import Blueprint, request, render_template, redirect, flash
 from flask import send_from_directory
 from flask import current_app as app
 
 from server.constants import EXPLANATION_TYPE_IDENTIFIERS
-from server.db import Finding, Explanation, FindingWeight
+from server.db import Finding, Explanation,DBError
 from server.helpers import success, failure
 from server.helpers.data import parse_csv
 from werkzeug import secure_filename
 
 admin_api = Blueprint( 'admin_api', __name__ )
 
-
-def remove_finding_if_unused( finding_name ):
-    ''' Delete the given finding if it's no longer in any explanation dictionaries.
-    '''
-    # Check if this finding no longer exists in the db.
-    count = Explanation.query.filter({'findings.name': finding_name}).count()
-    if count == 0:
-        # Remove from findings list
-        finding = Finding.query.filter( Finding.name == finding_name ).first()
-        if finding is not None:
-            finding.remove()
 
 def allowed_file( filename ):
     return '.' in filename and \
@@ -35,13 +23,14 @@ def admin_index():
     '''
         admin_index
 
-        Returns the 10 latest explanations entered into the database
+        Current page of Explanation browser.
     '''
 
     page = int( request.args.get( 'page', 1 ) )
 
     explanations = Explanation.query.ascending( Explanation.name ).paginate( page=page,
                      per_page=100 )
+
     return render_template( '/admin/browse.html', pagination=explanations )
 
 
@@ -57,20 +46,24 @@ def csv_upload():
 
     file = request.files[ 'file' ]
     if file and allowed_file( file.filename ):
+        t1 = time.time()
+
         filename = secure_filename( 'tmp.csv' )
         tmp_file = os.path.join( app.config[ 'UPLOAD_FOLDER' ], filename )
         file.save( tmp_file )
 
         # Now process the sucker!
         errors = parse_csv( tmp_file )
+        upload_time = ( time.time() - t1 )
         if len(errors):
             print errors
 
         if len( errors ) > 0:
+            flash('The following errors encountered parsing file (processing took {} seconds).'.format(upload_time),'error')
             for err in errors:
                 flash(err,'error')
         else:
-            flash( 'File uploaded and parsed successfully!', 'success' )
+            flash( 'File uploaded and parsed successfully (processing took {} seconds)!'.format(upload_time), 'success' )
 
         # Remove the tmp file
         os.remove( tmp_file )
@@ -84,9 +77,7 @@ def csv_download():
         csv_download
 
         Queries the database for ALL explanations and returns the results as a
-        CSV to be edited. The CSV will be sorted by explanation name.
-
-        The format in which the csv will as follows:
+        CSV to be edited. The CSV will be sorted by explanation name, formatted as:
         <explanation id>, <explanation name>, <finding 1>, <finding 2>, ...
 
         The findings will be formatted as such:
@@ -134,7 +125,7 @@ def add_explanation():
     '''
         add_explanations
 
-        Adds a explanation to the database ( if it doesn't already exist ).
+        Triggered from explanation browser.  Adds a explanation to the database ( if it doesn't already exist ).
         Redirects to the edit page with the new ( or existing ) explanation.
 
         @param name - Explanation name
@@ -151,32 +142,29 @@ def add_explanation():
         return failure('Invalid explanation type {} (must be one of {})!'.format(explanation_type_id,EXPLANATION_TYPE_IDENTIFIERS))
 
     # Query the database for the explanation information
-    explanation = Explanation.query.filter( {'name': explanation_name} ).first()
+    explanation = Explanation.query.filter( Explanation.name==explanation_name ).limit(1).first()
     findings = []
 
     # Check to see if it already exists.
     if explanation is None:
         explanation = Explanation( name=explanation_name, type_identifier=explanation_type_id )
-        explanation.save()
     else:
         if explanation.type_identifier != explanation_type_id:
             return failure('Explanation with name {} already exists, but type in database is {}, not {}!'.format(explanation_name,
                                                                                                                  explanation.type_identifier,
                                                                                                                  explanation_type_id))
-        # If the explanations exists, create a findings list to show on the
-        # edit page
-        findings_list = explanation.findings
-        findings = [ x.to_dict() for x in findings_list ]
 
-    return render_template( 'edit.html', explanation=explanation, findings=findings )
+    return render_template( 'edit.html', explanation=explanation )
 
 
+@admin_api.route( '/save/explanation/' )
 @admin_api.route( '/save/explanation/<explanation_id>' )
-def save_explanation( explanation_id ):
+def save_explanation( explanation_id=None ):
     '''
         save_explanation
 
-        Create a explanation if it doesn't already exist
+        Create a explanation if it doesn't already exist, save all the changes currently pending
+        on the edit page to the database.
 
         @param name - Explanation name
     '''
@@ -191,50 +179,27 @@ def save_explanation( explanation_id ):
     if explanation_type_id is None:
         return failure( 'No Explanation Type' )
 
-    explanation_type_id = explanation_type_id.strip().capitalize()
-
-    if explanation_type_id not in EXPLANATION_TYPE_IDENTIFIERS:
-        return failure('Invalid explanation type {} (must be one of {})!'.format(explanation_type_id,EXPLANATION_TYPE_IDENTIFIERS))
+    findings = json.loads(request.args.get( 'findings', None ))
 
     try:
-        explanation = Explanation.query.filter(Explanation.mongo_id == explanation_id).first()
-    except Exception:
-        return failure( 'Exception querying database for explanation' )
-
-    if explanation is None:
-        return failure( 'Failed to find explanation in database' )
-
-    explanation.name = explanation_name
-    if explanation.type_identifier != explanation_type_id:
-        print 'Changing Explanation Type To {}'.format(explanation_type_id)
-
-
-    explanation.type_identifier = explanation_type_id
-    explanation.save()
+        Explanation.upsert(name=explanation_name, type_identifier=explanation_type_id, finding_dicts=findings, mongo_id=explanation_id )
+    except Exception as err:
+        return failure('Upsert failure (type {}): {}'.format(err.__class__.__name__, err))
 
     return success()
 
 
+@admin_api.route( '/delete/explanation/', methods=[ 'GET' ] )
 @admin_api.route( '/delete/explanation/<explanation_id>', methods=[ 'GET' ] )
-def delete_explanation( explanation_id ):
+def delete_explanation( explanation_id=None ):
     '''
         delete_explanation
 
-        Deletes a explanation from the database
+        Deletes a explanation from the database (if it's been saved) and returns us to the browsing page
 
         @param explanation_id - Explanation MongoDB id
     '''
-    try:
-        explanation = Explanation.query.filter(Explanation.mongo_id == explanation_id).first()
-    except Exception:
-        # Invalid explanation id, just send back to admin page.
-        return redirect( '/admin' )
-
-    if explanation is not None:
-        finding_names = [fw.name for fw in explanation.findings]
-        explanation.remove()
-        [remove_finding_if_unused( fn ) for fn in finding_names]
-
+    Explanation.delete(explanation_id)
 
     return redirect( '/admin' )
 
@@ -244,7 +209,8 @@ def add_finding( explanation_id ):
     '''
         add_finding
 
-        Add a finding ( name & weight ) to a explanation
+        Check the finding before adding it to the table in the edit page.  
+        NOTE: finding not added to database until edit page is saved!
 
         @param explanation_id   - Explanation MongoDB id
         @param name         - Finding name
@@ -261,73 +227,7 @@ def add_finding( explanation_id ):
     except ValueError:
         return failure('Invalid Finding Weight')
 
-    # Find the explanation to add this finding too
-    try:
-        explanation = Explanation.query.filter( Explanation.mongo_id == explanation_id ).first()
-    except Exception:
-        return failure('Error loading explanation from database')
-
-    if explanation is None:
-        return failure('Error loading explanation from database')
-
-    # Check our findings list to see if we have this finding already or not
-    try:
-        finding = Finding.query.filter( Finding.name == finding_name ).first()
-    except Exception:
-        return failure('Database error!')
-
-    # Add this finding to the findings list
-    if finding is None:
-        finding = Finding( name=finding_name )
-        finding.save()
-
-    # Add this finding to the explanation
-    explanation.findings.append(FindingWeight( name=finding_name, weight=weight ))
-    explanation.save()
-
     return success()
-
-
-@admin_api.route( '/delete/<explanation_id>/finding/', methods=[ 'POST' ] )
-def delete_empty_finding( explanation_id ):
-    '''
-        delete_empty_finding
-
-        If for some reason a finding's name is empty ( by accident or in the
-        CSV ) This method helps alleviate that corner case. Calls
-        delete_finding with an empty finding_id
-
-        @param explanation_id - Explanation MongoDB id
-    '''
-    return delete_finding( explanation_id, '' )
-
-
-@admin_api.route('/delete/<explanation_id>/finding/<finding_id>', methods=['POST'])
-def delete_finding( explanation_id, finding_id ):
-    '''
-        delete_finding
-
-        Deletes a finding from a explanation instance
-
-        @param explanation_id - Explanation MongoDB id
-        @param finding_id - Finding id
-    '''
-    try:
-        explanation = Explanation.query.filter(Explanation.mongo_id == explanation_id).first()
-    except Exception:
-        return failure('Invalid Explanation ID')
-
-    # Find finding and remove it
-    for find in explanation.findings:
-        if find.name == finding_id:
-            explanation.findings.remove( find )
-            break
-    explanation.save()
-
-    remove_finding_if_unused( finding_id )
-
-    return success()
-
 
 @admin_api.route( '/edit/<explanation_id>')
 def edit_explanation( explanation_id ):
@@ -339,8 +239,23 @@ def edit_explanation( explanation_id ):
 
         @param explanation_id - Explanation MongoDB id
     '''
-    explanation = Explanation.query.filter( Explanation.mongo_id == explanation_id ).first()
-    findings = [ x.to_dict() for x in explanation.findings ]
+    explanation = Explanation.query.filter( Explanation.mongo_id == explanation_id ).limit(1).first()
 
-    return render_template( 'edit.html', explanation=explanation, findings=findings )
+    return render_template( 'edit.html', explanation=explanation )
 
+
+@admin_api.route( '/delete_all', methods=[ 'GET' ])
+def delete_all():
+    '''
+        Clear out the entire database.
+
+        Get rid of this?
+
+    '''
+    
+    Explanation.remove_all()
+    Finding.remove_all()
+
+    flash('Database deleted','delete')
+
+    return redirect( '/admin/manage' )
