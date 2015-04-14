@@ -1,6 +1,5 @@
 import csv
 
-from server.db import Explanation
 from server.constants import EXPLANATION_TYPE_IDENTIFIERS, EXPLANATION_REGIONS
 
 def _parse_findings( raw_finding_strings, error_prefix, errors ):
@@ -133,17 +132,11 @@ def parse_prevalence_csv( file ):
         if update_row is not None:
             update_explanations[update_row['name']+update_row['type_identifier']] = update_row
 
-    Explanation.bulk_update(update_explanations.values())
-
-    return errors
+    return errors,update_explanations
 
 
 def parse_gdata( gd_prev, gd_geo ):
     ''' Parse google sheets document.  Pull out both prevalence weights and geocoding stuff.
-
-    TODO: change this around.  Instead of loading into a list of dictionaries, just use a dict with explanation name as key.  Pass both
-    dicts in here, and run through both at once.
-
 
     The inputs are in the form of lists of dictionaries.  
 
@@ -194,6 +187,4 @@ def parse_gdata( gd_prev, gd_geo ):
             update_explanations[name]['type_identifier'] = row_dict['subtype'].capitalize()+' '+update_explanations[name]['type_identifier']
             update_explanations[name]['regions'] = regions
 
-    Explanation.bulk_update(update_explanations.values())
-
-    return errors
+    return errors,update_explanations

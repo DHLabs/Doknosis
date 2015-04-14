@@ -9,9 +9,6 @@ from server.constants import EXPLANATION_REGIONS
 
 mongo   = MongoAlchemy()
 
-BYPASS_BULKWRITE=True
-
-# TODO: add geocoding stuff
 # TODO: down the road, maybe more generic demographics class or something?
 # TODO: modify manual edit method to incorporate regions
 
@@ -37,7 +34,7 @@ class DocumentBase(mongo.Document):
         return getattr(Connection().doknosis,cls.__name__).count()
 
     @classmethod
-    def bulk_update_find_dict(cls,update_row):
+    def bulk_upsert_find_dict(cls,update_row):
         ''' Overload this guy to return a dictionary for searching the database in bulk update.
 
         Elements of the dictionary should have the form {database_name:search_term}.
@@ -45,7 +42,7 @@ class DocumentBase(mongo.Document):
         pass
 
     @classmethod
-    def bulk_update_set_dict(cls,update_row):
+    def bulk_upsert_set_dict(cls,update_row):
         ''' Overload this guy to return a dictionary for replacement in bulk update.
 
         Elements of the dictionary should have the form {database_name:replacement_value}.
@@ -53,19 +50,19 @@ class DocumentBase(mongo.Document):
         pass
 
     @classmethod
-    def bulk_update_preprocess(cls,update_list):
+    def bulk_upsert_preprocess(cls,update_list):
         ''' Overload if you want to do any preprocessing of the update_list before the bulk update.
         '''
         return update_list
 
     @classmethod
-    def bulk_update_postprocess(cls,update_list):
+    def bulk_upsert_postprocess(cls,update_list):
         ''' Overload if you want to do any post processing after the bulk update.
         '''
         pass
 
     @classmethod
-    def bulk_update(cls, update_list):
+    def bulk_upsert(cls, update_list):
         ''' Class method for handling a list of updates all at once
 
         Each element of update_list, call the superclass methods to get database serch terms and replace
@@ -74,27 +71,29 @@ class DocumentBase(mongo.Document):
         @param update_list List of terms passed into superclass methods for each bulk op.
         @exception DBError Raised if BulkWriteError is raised when we try to execute.
         '''
-        update_list = cls.bulk_update_preprocess(update_list)
+        update_list = cls.bulk_upsert_preprocess(update_list)
         if len(update_list) == 0:
             return
 
+        # Google sheet parsed successfully (processing took 19.967015028 seconds)!
+
         bulk = getattr(Connection().doknosis,cls.__name__).initialize_unordered_bulk_op()
         for upd in update_list:
-            bulk.find(cls.bulk_update_find_dict(upd)).upsert().update({'$set':cls.bulk_update_set_dict(upd)})
+            bulk.find(cls.bulk_upsert_find_dict(upd)).upsert().update({'$set':cls.bulk_upsert_set_dict(upd)})
 
         try:
             res = bulk.execute()
         except BulkWriteError as bwe:
             if len(bwe.details['writeConcernErrors']):
                 for one_err in bwe.details['writeConcernErrors']:
-                    raise DBError(cls.__name__+' bulk_update writeConcernError:'+one_err['errmsg'])
+                    raise DBError(cls.__name__+' bulk_upsert writeConcernError:'+one_err['errmsg'])
             if len(bwe.details['writeErrors']):
                 for one_err in bwe.details['writeErrors']:
-                    raise DBError(cls.__name__+' bulk_update writeError:'+one_err['errmsg'])
+                    raise DBError(cls.__name__+' bulk_upsert writeError:'+one_err['errmsg'])
 
-            raise DBError(cls.__name__+' bulk_update Unknown Error')
+            raise DBError(cls.__name__+' bulk_upsert Unknown Error')
 
-        cls.bulk_update_postprocess(update_list)
+        cls.bulk_upsert_postprocess(update_list)
 
     @classmethod
     def remove_all(cls):
@@ -126,28 +125,15 @@ class Explanation( DocumentBase ):
     findings = mongo.ListField(mongo.DocumentField(FindingWeight))
     regions = mongo.ListField(mongo.StringField())
 
-    @classmethod
-    def bulk_update(cls, update_list):
-        # TODO fix the bulk upsert and remove this!!!
-        for upd in Explanation.bulk_update_preprocess(update_list):
-            mongo_obj = Explanation(upd['name'],upd['type_identifier'],finding_dicts=upd['findings'])
-            if 'regions' in upd:
-                mongo_obj.regions = upd['regions']
-            else:
-                mongo_obj.regions = []
-            mongo_obj.save()
-
-        Explanation.bulk_update_postprocess(update_list)
-
 
     @classmethod
-    def bulk_update_find_dict(cls,update_row):
+    def bulk_upsert_find_dict(cls,update_row):
         ''' Explanation bulk updates use an upsert on the name and type_identifier keys.
         '''
         return {'name':update_row['name'], 'type_identifier':update_row['type_identifier']}
 
     @classmethod
-    def bulk_update_set_dict(cls,update_row):
+    def bulk_upsert_set_dict(cls,update_row):
         ''' In addition to name and type_identifier, we also may replace the findings and regions fields during Explanation bulk updates.
         '''
         rd = {}
@@ -166,7 +152,7 @@ class Explanation( DocumentBase ):
         return rd
 
     @classmethod
-    def bulk_update_preprocess(cls,update_list):
+    def bulk_upsert_preprocess(cls,update_list):
         ''' Remove redundant elements from update_list.
 
         Bulk update will overwrite elements of update_list with matching name and type.  Here we remove redundant guys
@@ -176,7 +162,7 @@ class Explanation( DocumentBase ):
             
 
     @classmethod
-    def bulk_update_postprocess(cls,update_list):
+    def bulk_upsert_postprocess(cls,update_list):
         ''' When we do a bulk update of explanations, trigger a bulk update of associated Findings after.
         '''
         finding_list = list(set([fd['name'] for fdl in update_list for fd in fdl['findings']]))
@@ -255,21 +241,13 @@ class Explanation( DocumentBase ):
 
 class Finding( DocumentBase ):
     @classmethod
-    def bulk_update(cls, update_list):
-        # TODO fix the bulk upsert and remove this!!!
-        for upd in update_list:
-            mongo_obj = Finding(name=upd)
-            mongo_obj.save()
-
-
-    @classmethod
-    def bulk_update_find_dict(cls,update_row):
+    def bulk_upsert_find_dict(cls,update_row):
         ''' Finding bulk update is very simple, just upsert unique name attributes.
         '''
         return {'name':update_row}
 
     @classmethod
-    def bulk_update_set_dict(cls,update_row):
+    def bulk_upsert_set_dict(cls,update_row):
         ''' Finding bulk update is very simple, just upsert unique name attributes.
         '''
         return {'name':update_row}
@@ -279,7 +257,7 @@ class Finding( DocumentBase ):
         ''' Add given findings (if not already there).  Delete the given findings if they are no longer in any explanation dictionaries.
         '''
         # Uniquification should be handled internally...
-        Finding.bulk_update(findings_added)
+        Finding.bulk_upsert(findings_added)
 
         # There has got to be a better way, but this is not used too often so...
         for fn in findings_removed:

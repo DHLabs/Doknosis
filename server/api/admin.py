@@ -88,7 +88,10 @@ def csv_upload():
         file.save( tmp_file )
 
         # Now process the sucker!
-        errors = parse_prevalence_csv( tmp_file )
+        errors,update_explanations = parse_prevalence_csv( tmp_file )
+
+        # Here we do the actual database updating.
+        Explanation.bulk_upsert(update_explanations.values())
         upload_time = ( time.time() - t1 )
         if len(errors):
             print errors
@@ -129,35 +132,27 @@ def gdata_sync():
     gd_prev,err = gds.read_to_dict('explanatoryvariable')
     if err is not None:
         flash(err,'error')
-    # try:
-    #     gd_prev = gds.read_to_dict('explanatoryvariable')
-    # except GDError as err:
-    #     flash(str(err),'error')
-    #     return redirect('/admin/manage')
+        return redirect( '/admin/manage')
     
     gds.set_worksheet(GDATA_WS_GEO)
     gd_geo,err = gds.read_to_dict('explanatoryvariable')
     if err is not None:
         flash(err,'error')
-    # try:
-    #     gd_geo = gds.read_to_dict('explanatoryvariable')
-    # except GDError as err:
-    #     flash(str(err),'error')
-    #     return redirect('/admin/manage')
+        return redirect( '/admin/manage')
 
-    errors = parse_gdata(gd_prev,gd_geo)
+    errors,update_explanations = parse_gdata(gd_prev,gd_geo)
 
-    upload_time = ( time.time() - t1 )
-    if len(errors):
-        print errors
+    update_time = ( time.time() - t1 )
 
     if len( errors ) > 0:
-        flash('The following errors encountered parsing google sheet (processing took {} seconds).'.format(upload_time),'error')
+        flash('NO UPDATE!  The following errors encountered parsing google sheet (processing took {} seconds).'.format(upload_time),'error')
         for err in errors:
             flash(err,'error')
     else:
-        flash( 'Google sheet parsed successfully (processing took {} seconds)!'.format(upload_time), 'success' )
-    
+        Explanation.remove_all()
+        Finding.remove_all()
+        Explanation.bulk_upsert(update_explanations.values())
+        flash( 'Google sheet parsed successfully (processing took {} seconds)!  Database reloaded.'.format(update_time), 'success' )    
 
     return redirect( '/admin/manage' )
 
