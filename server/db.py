@@ -9,6 +9,8 @@ from server.constants import EXPLANATION_REGIONS
 
 mongo   = MongoAlchemy()
 
+BYPASS_BULKWRITE=True
+
 # TODO: add geocoding stuff
 # TODO: down the road, maybe more generic demographics class or something?
 # TODO: modify manual edit method to incorporate regions
@@ -125,6 +127,20 @@ class Explanation( DocumentBase ):
     regions = mongo.ListField(mongo.StringField())
 
     @classmethod
+    def bulk_update(cls, update_list):
+        # TODO fix the bulk upsert and remove this!!!
+        for upd in Explanation.bulk_update_preprocess(update_list):
+            mongo_obj = Explanation(upd['name'],upd['type_identifier'],finding_dicts=upd['findings'])
+            if 'regions' in upd:
+                mongo_obj.regions = upd['regions']
+            else:
+                mongo_obj.regions = []
+            mongo_obj.save()
+
+        Explanation.bulk_update_postprocess(update_list)
+
+
+    @classmethod
     def bulk_update_find_dict(cls,update_row):
         ''' Explanation bulk updates use an upsert on the name and type_identifier keys.
         '''
@@ -238,6 +254,14 @@ class Explanation( DocumentBase ):
 
 
 class Finding( DocumentBase ):
+    @classmethod
+    def bulk_update(cls, update_list):
+        # TODO fix the bulk upsert and remove this!!!
+        for upd in update_list:
+            mongo_obj = Finding(name=upd)
+            mongo_obj.save()
+
+
     @classmethod
     def bulk_update_find_dict(cls,update_row):
         ''' Finding bulk update is very simple, just upsert unique name attributes.
