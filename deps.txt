@@ -10,5 +10,6 @@ Werkzeug==0.8.3
 gunicorn==0.15.0
 pycrypto==2.6
 pymongo==2.2.1
+gdata==2.0.18
 ssh==1.8.0
 wsgiref==0.1.2
