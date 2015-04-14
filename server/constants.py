@@ -1,14 +1,17 @@
 # Legal type identifiers for explanations
-EXPLANATION_TYPE_IDENTIFIERS = ['Drug','Disease']
+EXPLANATION_TYPE_IDENTIFIERS = ['Drug','Disease','Sporadic Disease','Infectious Disease']
+# Map categories (for UI) to a list of possible type_identifiers
+EXPLANATION_TYPE_CATEGORIES = {'Drug':['Drug'],
+                               'All Disease':['Sporadic Disease','Infectious Disease','Disease'],
+                               'Sporadic Disease':['Sporadic Disease'],
+                               'Infectious Disease':['Infectious Disease'],
+                               'All':EXPLANATION_TYPE_IDENTIFIERS}
+
+# All geographic regions used
+EXPLANATION_REGIONS = ['North America','South America','Central America','Carribean','Europe',
+                       'Middle East','East Asia','South Asia','Australia','Africa']
 
 # Algorithm choice constants
-ALGO_HYBRID_1 = 1
-ALGO_HYBRID_2 = 2
-ALGO_BAYESIAN = 3
+DIAGNOSIS_ALGORITHMS = ['Hybrid 1','Hybrid 2','Naive Bayes']
+DIAGNOSIS_ALGORITHM_DEFAULT = 'Hybrid 1'
 
-# keys are used as attributes in the html, as well as the "is country" property for parsing the file
-country_dict = {'asia':'Asia', 'africa':'Africa', 'mozambique': 'Mozambique'}
-
-# age is what will be in attribute field of html, value is what appears to user
-# age_dict = {'infant': 'Infant', 'child': 'Child', 'adult':'Adult', 'elderly':'Elderly'}
-# sex_dict = {'male': 'Male', 'female':'Female'}

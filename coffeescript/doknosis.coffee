@@ -3,6 +3,7 @@ window.Diagnosis || = {}
 Diagnosis.clear_all = () ->
 	# Remove all symptons
 	window.symptoms = []
+	
 	$( '.rm' ).fadeOut( 'fast', () ->
 		$( @parentNode ).remove()
 		@
@@ -38,11 +39,15 @@ Diagnosis.get_diagnosis = () ->
 			null
 		)
 
+	# Pull region names from checkbox id's.
+	regions_enabled = (item.id for item in $("#region-checkboxes input:checked"))
+
 	params =
 		findings: 			window.symptoms.join( ',' )
 		num_solutions:  	$( '#num_solutions' ).val()
 		num_combinations:	$( '#num_combinations' ).val()
 		type_identifier:	$( '#type_identifier' ).val()
+		regions:            regions_enabled.join(',')
 		algorithm:			$( '#algorithm' ).val()
 
 	$.getJSON( '/diagnosis_result', params, ( data ) ->
@@ -96,15 +101,16 @@ $ ->
 		Diagnosis.get_diagnosis()
 	window.type_identifier.onchange = () ->
 		Diagnosis.get_diagnosis()
-
+	$("input:checkbox").on("change", () ->
+		Diagnosis.get_diagnosis())
 
 	# This is triggered when user clicks the close button on one of the symptoms in the symptom window (remove symptom from view and local list, trigger new diagnosis)
 	$( document ).on( 'click', '.rm', () ->
-		id = $( @ ).data( 'sid' )
+		sid = $( @ ).data( 'sid' )
 
 		# Find and remove the symptom from js list
-		if window.symptoms.indexOf(id) != -1
-			window.symptoms.splice(window.symptoms.indexOf(id),1)
+		if window.symptoms.indexOf(sid) != -1
+			window.symptoms.splice(window.symptoms.indexOf(sid),1)
 			Diagnosis.get_diagnosis()
 			
 			# Remove the label from the symptoms box
@@ -127,7 +133,7 @@ $ ->
 			$( '#symptoms-list > .help-text' ).remove()
 			$( '#symptoms-list' ).append( '<span class="label"><span>' + ui.item.label +
 				'</span><span data-sid="' + ui.item.id + '" class="rm">x</span></span>' )
-			window.symptoms.push( ui.item.label )
+			window.symptoms.push( ui.item.id )
 			Diagnosis.get_diagnosis()
 	)
 

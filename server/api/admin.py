@@ -7,11 +7,13 @@ from flask import current_app as app
 from server.constants import EXPLANATION_TYPE_IDENTIFIERS
 from server.db import Finding, Explanation,DBError
 from server.helpers import success, failure
-from server.helpers.data import parse_csv
+from server.helpers.data import parse_prevalence_csv,parse_gdata
+from server.helpers.GDataClient import GDataClient,GDError,GDATA_MAIN_DOC,GDATA_WS_PREVALENCE,GDATA_WS_GEO
 from werkzeug import secure_filename
 
 admin_api = Blueprint( 'admin_api', __name__ )
 
+BROWSER_ITEMS_PER_PAGE=10
 
 def allowed_file( filename ):
     return '.' in filename and \
@@ -28,10 +30,43 @@ def admin_index():
 
     page = int( request.args.get( 'page', 1 ) )
 
-    explanations = Explanation.query.ascending( Explanation.name ).paginate( page=page,
-                     per_page=100 )
+    curpage = Explanation.query.ascending( Explanation.name ).paginate( page=page,per_page=BROWSER_ITEMS_PER_PAGE )
 
-    return render_template( '/admin/browse.html', pagination=explanations )
+    return render_template( '/admin/browse.html', pagination=curpage )
+
+@admin_api.route( '/jumpto/explanation' )
+def admin_jumpto():
+    '''
+        Jump to a different page of the browser.
+    '''
+
+    
+    initial_page = int( request.args.get( 'page', 1 ) )
+    seeking_name = request.args.get( 'name', None )
+    if seeking_name is None:
+        return failure( 'No name specified!' )
+
+    # There is probably a faster way...
+    curpage = Explanation.query.ascending( Explanation.name ).paginate( page=1, per_page=BROWSER_ITEMS_PER_PAGE )
+
+    # flash('Seeking {}'.format(seeking_name),'error')
+
+    exp_found = next((True for exp in curpage.items if exp.name == seeking_name), False)
+    while(exp_found == False and curpage.has_next()):
+        # if exp_found == False:
+        #     flash('Not found on page {}'.format(curpage.page),'error')
+        curpage = curpage.next(error_out=True)
+        # flash('All names on page = {}'.format([exp.name for exp in curpage.items]),'error')
+        exp_found = next((True for exp in curpage.items if exp.name == seeking_name), False)
+        # if exp_found == True:
+        #     flash('Found on page {}'.format(curpage.page),'error')
+
+    if exp_found == False:
+        flash('Failed to find explanation with name {} in database!'.format(seeking_name),'error')
+        while(curpage.page > initial_page and curpage.has_prev()):
+            curpage = curpage.prev(error_out=True)
+
+    return render_template( '/admin/browse.html', pagination=curpage )
 
 
 @admin_api.route( '/csv_upload', methods=[ 'POST' ] )
@@ -53,7 +88,7 @@ def csv_upload():
         file.save( tmp_file )
 
         # Now process the sucker!
-        errors = parse_csv( tmp_file )
+        errors = parse_prevalence_csv( tmp_file )
         upload_time = ( time.time() - t1 )
         if len(errors):
             print errors
@@ -67,6 +102,62 @@ def csv_upload():
 
         # Remove the tmp file
         os.remove( tmp_file )
+
+    return redirect( '/admin/manage' )
+
+
+@admin_api.route( '/gdata_sync', methods=[ 'POST' ] )
+def gdata_sync():
+    '''
+        gdata_sync
+
+        Sync data directly from google sheets.  A direct access username and password must be passed in.
+    '''
+    if request.method != 'POST':
+        return redirect( '/admin/manage' )
+
+    t1 = time.time()
+
+    username = request.form['username']
+    pswd = request.form['password']
+
+    gds = GDataClient(username,pswd)
+
+    gds.set_document(GDATA_MAIN_DOC)
+
+    gds.set_worksheet(GDATA_WS_PREVALENCE)
+    gd_prev,err = gds.read_to_dict('explanatoryvariable')
+    if err is not None:
+        flash(err,'error')
+    # try:
+    #     gd_prev = gds.read_to_dict('explanatoryvariable')
+    # except GDError as err:
+    #     flash(str(err),'error')
+    #     return redirect('/admin/manage')
+    
+    gds.set_worksheet(GDATA_WS_GEO)
+    gd_geo,err = gds.read_to_dict('explanatoryvariable')
+    if err is not None:
+        flash(err,'error')
+    # try:
+    #     gd_geo = gds.read_to_dict('explanatoryvariable')
+    # except GDError as err:
+    #     flash(str(err),'error')
+    #     return redirect('/admin/manage')
+
+    errors = parse_gdata(gd_prev,gd_geo)
+
+    upload_time = ( time.time() - t1 )
+    if len(errors):
+        print errors
+
+    if len( errors ) > 0:
+        flash('The following errors encountered parsing google sheet (processing took {} seconds).'.format(upload_time),'error')
+        for err in errors:
+            flash(err,'error')
+    else:
+        flash( 'Google sheet parsed successfully (processing took {} seconds)!'.format(upload_time), 'success' )
+    
 
     return redirect( '/admin/manage' )
 

@@ -1,17 +1,16 @@
 import csv
 
 from server.db import Explanation
-from server.constants import EXPLANATION_TYPE_IDENTIFIERS
+from server.constants import EXPLANATION_TYPE_IDENTIFIERS, EXPLANATION_REGIONS
 
-
-def _parse_findings( raw_finding_strings, errors, line_no ):
+def _parse_findings( raw_finding_strings, error_prefix, errors ):
     ''' Parse a list of findings from csv input.
 
     Make sure that the formats are all correct, translate into FindingWeight objects for database.
     
     @param raw_finding_strings List of entries in the csv file, each of which has the form name_string:weight, with weight a number in [0,1].
+    @param error_prefix Name of row so we can locate errors.
     @param errors List of errors thus far (if we get an error, we append to list and return).
-    @param line_no Line in the csv file, not currently used.
 
     @returns List of FindingWeight objects for database.
     '''
@@ -31,13 +30,13 @@ def _parse_findings( raw_finding_strings, errors, line_no ):
                 weight = float(finding_components[-1])
                 if weight > 1 or weight < 0:
                     # If a finding has an invalid prevalence number, spit out a warning and ignore it.
-                    errors.append('Row {}: Finding \"{}\", prevalence weight ({}) not in [0,1].'.format(line_no, finding_name,weight))
+                    errors.append(error_prefix+'Finding \"{}\", prevalence weight ({}) not in [0,1].'.format(finding_name,weight))
                     finding_parse_error = True
                     break
 
             except ValueError:
                 # If prevalence value is not a probability, skip this finding!
-                errors.append('Row {}: Finding \"{}\", prevalence weight ({}) not a number.'.format(line_no, finding_name,finding_components[-1]))
+                errors.append(error_prefix+'Finding \"{}\", prevalence weight ({}) not a number.'.format(finding_name,finding_components[-1]))
                 finding_parse_error = True
                 break
 
@@ -45,8 +44,64 @@ def _parse_findings( raw_finding_strings, errors, line_no ):
 
     return ( finding_parse_error, finding_weights )
 
+def ascii_check(string_list, error_prefix, errors):
+    ''' Make sure that the line contains only ascii characters.  
 
-def parse_csv( file ):
+    Any ascii decoding errors will be appended to the list of errors.
+    @returns True if any decode errors encountered.
+    '''
+    # First thing is to 
+    # thrown by database down the line and I'd rather catch it here.
+    ascii_failure = False
+    for field in string_list:
+        if field is None:
+            continue
+        try:
+            field.decode('ascii')
+        except UnicodeDecodeError:
+            rep_field = field.decode('ascii','replace').encode('ascii','replace')
+            errors.append(error_prefix+'Non-ascii characters in field \"{}\".  Skipping this row!'.format(rep_field))
+            ascii_failure = True
+
+    return ascii_failure
+
+def parse_prevalence_row( this_row, error_prefix, errors ):
+    if ascii_check(this_row,error_prefix,errors):
+        return None
+
+    if len( this_row ) < 3:
+        errors.append(error_prefix+'Must have an ID ( can be blank ), name, and type identifier (e.g., \"Disease\"). Skipping this row!')
+        return None
+
+    this_row_id          = this_row[0].strip()
+    this_row_name        = this_row[1].strip().capitalize()
+    this_row_typeid      = this_row[2].strip().capitalize()
+
+    if len( this_row_name ) == 0:
+        errors.append(error_prefix+'Name must NOT be empty!')
+        return None
+
+    if this_row_typeid not in EXPLANATION_TYPE_IDENTIFIERS:
+        errors.append(error_prefix+'Invalid type identifier \"{}\", must be one of {}.  Skipping this row!'.format( this_row_typeid, EXPLANATION_TYPE_IDENTIFIERS))
+        return None
+
+
+    if len( this_row ) > 3:
+        this_row_findings = this_row[2:]
+    else:
+        this_row_findings = [':0.5']
+
+    # Before messing with the database to figure out if we are creating or updating, we first parse the findings because if
+    # that fails then we are going to skip this entry anyway.
+    finding_parse_error, finding_weights = _parse_findings(this_row_findings, error_prefix, errors)
+    if finding_parse_error:
+        return None
+
+    return {'name':this_row_name,'type_identifier':this_row_typeid,'findings':finding_weights}
+
+
+
+def parse_prevalence_csv( file ):
     ''' Parse a csv file for weighted Explanation/Observation mappings.
 
     The input file has rows which correspond to explanatory variables.  Each row has the form [id,name,type,[findings]], where
@@ -74,49 +129,70 @@ def parse_csv( file ):
     line_no = 0
     for csv_entry in reader:
         line_no += 1
+        update_row = parse_prevalence_row(csv_entry,'Row: {} -- '.format(line_no),errors)
+        if update_row is not None:
+            update_explanations[update_row['name']+update_row['type_identifier']] = update_row
 
-        # First thing is to make sure that the line contains only ascii characters.  Otherwise an exception is
-        # thrown by database down the line and I'd rather catch it here.
-        ascii_failure = False
-        for field in csv_entry:
-            try:
-                field.decode('ascii')
-            except UnicodeDecodeError:
-                rep_field = field.decode('ascii','replace').encode('ascii','replace')
-                errors.append('Row {}: Non-ascii characters in field \"{}\".  Skipping this row!'.format(line_no,rep_field))
-                ascii_failure = True
-        if ascii_failure:
-            continue
+    Explanation.bulk_update(update_explanations.values())
 
-        if len( csv_entry ) < 3:
-            errors.append( 'Row %d: Must have an ID ( can be blank ), name, and type identifier (e.g., \"Disease\"). Skipping this row!' % ( line_no ) )
-            continue
-
-        csv_entry_id          = csv_entry[0].strip()
-        csv_entry_name        = csv_entry[1].strip().capitalize()
-        csv_entry_typeid      = csv_entry[2].strip().capitalize()
-
-        if len( csv_entry_name ) == 0:
-            errors.append( 'Row %d: Name must NOT be empty!' % ( line_no ) )
-            continue
-
-        if csv_entry_typeid not in EXPLANATION_TYPE_IDENTIFIERS:
-            errors.append( 'Row {}: Invalid type identifier \"{}\", must be one of {}.  Skipping this row!'.format( line_no, csv_entry_typeid, EXPLANATION_TYPE_IDENTIFIERS) )
-            continue
+    return errors
 
 
-        if len( csv_entry ) > 3:
-            csv_entry_findings = csv_entry[2:]
-        else:
-            csv_entry_findings = [':0.5']
+def parse_gdata( gd_prev, gd_geo ):
+    ''' Parse google sheets document.  Pull out both prevalence weights and geocoding stuff.
 
-        # Before messing with the database to figure out if we are creating or updating, we first parse the findings because if
-        # that fails then we are going to skip this entry anyway.
-        finding_parse_error, finding_weights = _parse_findings(csv_entry_findings, errors, line_no)
-        if finding_parse_error:
-            continue
+    TODO: change this around.  Instead of loading into a list of dictionaries, just use a dict with explanation name as key.  Pass both
+    dicts in here, and run through both at once.
 
-        update_explanations[csv_entry_name+csv_entry_typeid] = {'name':csv_entry_name,'type_identifier':csv_entry_typeid,'findings':finding_weights}
+
+    The inputs are in the form of lists of dictionaries.  
+
+    @param gd_prev Dictionary of prevalence weights.  Indexed by explanatory variable name, each row has 'id', 'type', and 'rowname'
+    then any number of others which correspond to findings.
+    
+    @param gd_geo Dictionary of geocode data.  Indexed by explanatory variable name, each row has 'subtype', 'rowname',
+    and 'alllocations' (ignored), followed by all elements of EXPLANATION_REGIONS (without spaces and lower case).
+
+    @returns List of parse errors encountered along the way.
+    '''
+    errors = []
+
+    all_keys = list(set(gd_prev.keys())|set(gd_geo.keys()))
+    all_regions_set = set(EXPLANATION_REGIONS)
+
+    # Gather operations for bulk updates.
+    update_explanations = {}
+    for name in all_keys:
+        if name in gd_prev:
+            row_dict = gd_prev[name]
+            row_list = [row_dict.get('id'),name,row_dict.get('type')]
+            [row_list.append(row_dict.get(this_key)) for this_key in row_dict.keys() 
+             if this_key not in ['explanatoryvariable','id','type','rowname']]
+            # Empty cells in the google sheet come up as None type here, but for csv they read as ''.
+            update_row = parse_prevalence_row(map(lambda x: '' if x is None else x,row_list),
+                                              'Prevalence data '+row_dict['rowname']+' -- ', errors)
+            if update_row is not None:
+                update_explanations[name] = update_row
+
+        if name in gd_geo:
+            row_dict = gd_geo[name]
+            error_prefix = 'Geo data \"'+row_dict['rowname']+'\" -- '
+            if ascii_check(row_dict.values(),error_prefix,errors):
+                continue
+
+            regions = list(set([ff[:-2] for ff in row_dict.values() if ff[-2:] == ':1']).intersection(all_regions_set))
+            if regions is None or len(regions) == 0:
+                errors.append(error_prefix+'No acceptable regions? ({} filtered to {} when seeking strings ending in ":1")'
+                              .format(row_dict.values(),[ff[:-2] for ff in row_dict.values() if ff[-2:] == ':1']))
+                continue
+            
+            if name not in update_explanations:
+                errors.append(error_prefix+'This explanation does not match any in prevalence data!  Skipping!'.format(name))
+                continue
+
+            # Prepend subtype to disease.
+            update_explanations[name]['type_identifier'] = row_dict['subtype'].capitalize()+' '+update_explanations[name]['type_identifier']
+            update_explanations[name]['regions'] = regions
 
     Explanation.bulk_update(update_explanations.values())
 

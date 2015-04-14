@@ -2,14 +2,17 @@ from mongoalchemy.document import Index
 from flask.ext.mongoalchemy import MongoAlchemy
 from pymongo import Connection
 from pymongo.errors import BulkWriteError
+from server.constants import EXPLANATION_REGIONS
 
 # For debugging:
 # from flask import flash
 
 mongo   = MongoAlchemy()
 
-# TODO: add geocoding stuff, maybe a generic demographics class or something?
-# TODO: add subtypes, or should they be specified in type (e.g. "infectious disease" instead of just "disease")?
+# TODO: add geocoding stuff
+# TODO: down the road, maybe more generic demographics class or something?
+# TODO: modify manual edit method to incorporate regions
+
 
 class DBError(Exception):
     """ Exception generated when database access classes are misused. """
@@ -119,6 +122,7 @@ class FindingWeight( mongo.Document ):
 class Explanation( DocumentBase ):
     type_identifier = mongo.StringField()
     findings = mongo.ListField(mongo.DocumentField(FindingWeight))
+    regions = mongo.ListField(mongo.StringField())
 
     @classmethod
     def bulk_update_find_dict(cls,update_row):
@@ -128,12 +132,22 @@ class Explanation( DocumentBase ):
 
     @classmethod
     def bulk_update_set_dict(cls,update_row):
-        ''' In addition to name and type_identifier, we also replace the findings field during Explanation bulk updates.
+        ''' In addition to name and type_identifier, we also may replace the findings and regions fields during Explanation bulk updates.
         '''
-        bad_finding = next((fd for fd in update_row['findings'] if 'name' not in fd or 'weight' not in fd),None)
-        if bad_finding is not None:
-            raise DBError('Bad finding \"{}\" (must contain a name and a weight)!'.format(bad_finding))
-        return {'findings':update_row['findings']}
+        rd = {}
+        if 'findings' in update_row:
+            bad_finding = next((fd for fd in update_row['findings'] if 'name' not in fd or 'weight' not in fd),None)
+            if bad_finding is not None:
+                raise DBError('Bad finding \"{}\" (must contain a name and a weight)!'.format(bad_finding))
+            rd['findings']=update_row['findings']
+
+        if 'regions' in update_row:
+            bad_region = next((rg for rg in update_row['regions'] if rg not in EXPLANATION_REGIONS),None)
+            if bad_region is not None:
+                raise DBError('Bad region \"{}\" (must be one of {})!'.format(bad_finding, EXPLANATION_REGIONS))
+            rd['regions']=update_row['regions']
+
+        return rd
 
     @classmethod
     def bulk_update_preprocess(cls,update_list):
@@ -142,9 +156,6 @@ class Explanation( DocumentBase ):
         Bulk update will overwrite elements of update_list with matching name and type.  Here we remove redundant guys
         so as to avoid issues with zombie findings.
         '''
-
-        # Without this:
-        # File uploaded and parsed successfully (processing took 1.76025295258 seconds)!
         return {upd['name']+upd['type_identifier']:upd for upd in update_list}.values()
             
 

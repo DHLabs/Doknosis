@@ -49,7 +49,7 @@ def explanation_autocomplete():
     '''
     term = request.args.get( 'term', '' )
 
-    explanations = Explanation.query.filter( {'name': {'$regex': '.*%s.*' % (term)}} )\
+    explanations = Explanation.query.filter( {'name': {'$regex': '{}'.format(term), '$options':'i'}} )\
                     .limit( 20 )\
                     .ascending( Explanation.name )\
                     .all()
@@ -57,7 +57,7 @@ def explanation_autocomplete():
     # Convert into an JSON object
     json_findings = []
     for finding in explanations:
-        json_findings.append( { 'id':    str( finding.mongo_id ),\
+        json_findings.append( { 'id': str( finding.mongo_id ),\
                                 'label': finding.name,\
                                 'value': finding.name } )
     return json.dumps( json_findings )

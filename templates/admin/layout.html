@@ -1,35 +1,37 @@
 <!doctype html>
 <html lang='en'>
-<head>
-	<meta charset='utf-8'>
-	<title>Doknosis | Admin Panel</title>
+  <head>
+    <meta charset='utf-8'>
+    <title>Doknosis | Admin Panel</title>
+    
+    <link rel='stylesheet' href='/static/css/layout.css' type='text/css'>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7/jquery.min.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.min.js"></script>
+    
+    <script type='text/javascript'>
+      $( function() {
+	  $( "#explanations" ).autocomplete({
+	      source: '/api/explanation/autocomplete',
+	      select: function(event, ui) {
+		  window.location = '/admin/edit/' + ui.item.id;
+	      }
+	  });
+      });
+      
+      function add_explanation() {
+	  var dname = $( '#explanations' ).val();
+	  if( dname.length == 0 ) {
+	      alert( 'Please enter the name of an explanatory variable in the textbox first!' );
+	  } else {
+	      window.location = '/admin/add/explanation?name=' + encodeURIComponent( $( '#explanations' ).val() );
+	  }
+      };
 
-	<link rel='stylesheet' href='/static/css/layout.css' type='text/css'>
-	<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-
-	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7/jquery.min.js"></script>
-	<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.min.js"></script>
-
-	<script type='text/javascript'>
-		$( function() {
-			$( "#explanations" ).autocomplete({
-				source: '/api/explanation/autocomplete',
-				select: function(event, ui) {
-			    	window.location = '/admin/edit/' + ui.item.id;
-				}
-			});
-	 	});
-
-	 	function add_explanation() {
-	 		var dname = $( '#explanations' ).val();
-	 		if( dname.length == 0 ) {
-	 			alert( 'Please enter the name of an explanatory variable in the textbox first!' );
-	 		} else {
-	 			window.location = '/admin/add/explanation?name=' + encodeURIComponent( $( '#explanations' ).val() );
-	 		}
-	 	}
-	 </script>
-</head>
+    </script>
+    
+  </head>
 
 <body>
 	<div class='navbar'>

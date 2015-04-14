@@ -4,6 +4,7 @@ import time
 from operator import mul,or_,itemgetter
 from heapq import nlargest
 from server.db import Explanation
+from server.constants import EXPLANATION_TYPE_IDENTIFIERS, EXPLANATION_TYPE_CATEGORIES, EXPLANATION_REGIONS
 
 DEFAULT_TYPE_IDENTIFIER = 'infectious disease'
 
@@ -14,26 +15,32 @@ class AlgoError(Exception):
     def __str__(self):
         return 'Error Running Diagnosis -- \"{}\"!'.format(self.msg)
 
-def fetch_exp_for_findings(type_identifier,findings):
+def fetch_exp_for_findings(type_identifier,findings,regions=EXPLANATION_REGIONS):
     """ For a type identifier and given set of findings, fetch all of the correctly typed explanations which name the findings.
 
     @param type_identifier String identifying the type of explanatory variable, or "All" for all types.
     @param findings List of finding names to use in query filter.
     """
     try:
-        if type_identifier == "All":
-            explanations_list = Explanation.query.filter({ 'findings.name': {'$in': findings }}).all()
-        else:
-            explanations_list = Explanation.query.filter({'type_identifier':type_identifier, 'findings.name': {'$in': findings }}).all()
+        explanations_list = Explanation.query.filter({ 'type_identifier': {'$in': EXPLANATION_TYPE_CATEGORIES[type_identifier]}, 
+                                                       'findings.name': {'$in': findings }}).all()
     except Exception as e:
-        raise AlgoError('Database error in query for explanations of type {} with findings in {}: {}'.format(type_identifier,findings,e))
+        raise AlgoError('Database error in query for explanations of type {} (list form: {}) with findings in {}: {}'
+                        .format(type_identifier,EXPLANATION_TYPE_CATEGORIES[type_identifier],findings,e))
 
-    # Special cases for any explanation that has findings with zero or one conditional
-    # ffunc = lambda expl: not(any([xx.weight == 1.0 and xx.name not in findings for xx in expl.findings]) or 
-    #                          any([xx.weight == 0 and xx.name in findings for xx in expl.findings]))
+    # Weed out any explanations which have 0 weight associated with a finding we are looking for
     ffunc = lambda expl: not(any([xx.weight == 0 and xx.name in findings for xx in expl.findings]))
-    return filter(ffunc,explanations_list)
-    # return explanations_list
+    filtered_list = filter(ffunc,explanations_list)
+
+    # Weed out any explanations which do not have overlapping regions with target
+    ffunc = lambda expl: (len(expl.regions) == 0) or (len(set(expl.regions).intersection(set(regions))) > 0)
+    filtered_list = filter(ffunc,filtered_list)
+
+    if len(filtered_list) == 0:
+        raise AlgoError('Empty findings list!  Before filtering by weights, database query with type {} (list form: {}), findings in {} found: {}.'
+                        .format(type_identifier,EXPLANATION_TYPE_CATEGORIES[type_identifier],findings,explanations_list))
+
+    return filtered_list
 
 
 def combinations(iterable, r):
@@ -183,7 +190,7 @@ def tupleToDict(list_of_tuples):
 
     return explanations_to_prob_dict
 
-def run_hybrid_1( knowns, findings, num_solutions=10, num_combinations=1, type_identifier=DEFAULT_TYPE_IDENTIFIER ):
+def run_hybrid_1( knowns, findings, num_solutions=10, num_combinations=1, type_identifier=DEFAULT_TYPE_IDENTIFIER, regions=EXPLANATION_REGIONS):
     '''
     Vinterbo Country, find best solution for findings in G using Greedy and Measure
 
@@ -198,9 +205,7 @@ def run_hybrid_1( knowns, findings, num_solutions=10, num_combinations=1, type_i
     # Filter by knowns
     t1 = time.time()
 
-    explanations_list = fetch_exp_for_findings(type_identifier,findings)
-    if len(explanations_list) == 0:
-        raise AlgoError('Database query for explanations of type {} with findings in {} turned up empty!'.format(type_identifier,findings))
+    explanations_list = fetch_exp_for_findings(type_identifier,findings,regions)
 
     query_time = ( time.time() - t1 ) * 1000.0
 
@@ -232,14 +237,12 @@ def run_hybrid_1( knowns, findings, num_solutions=10, num_combinations=1, type_i
 
     return ( query_time, results )
 
-def run_hybrid_2( knowns, findings, num_solutions=10, num_combinations=1, type_identifier=DEFAULT_TYPE_IDENTIFIER ):
+def run_hybrid_2( knowns, findings, num_solutions=10, num_combinations=1, type_identifier=DEFAULT_TYPE_IDENTIFIER, regions=EXPLANATION_REGIONS ):
     # Filter by knowns
-    # explanations_all  = Explanation.query.all()
 
     t1 = time.time()
-    explanations_list = fetch_exp_for_findings(type_identifier,findings)
-    if len(explanations_list) == 0:
-        raise AlgoError('Database query for explanations of type {} with findings in {} turned up empty!'.format(type_identifier,findings))
+    explanations_list = fetch_exp_for_findings(type_identifier,findings,regions)
+
     query_time = ( time.time() - t1 ) * 1000.0
 
     # Convert from list to hashmap
@@ -254,7 +257,7 @@ def run_hybrid_2( knowns, findings, num_solutions=10, num_combinations=1, type_i
     return None
         
 
-def run_bayesian( knowns, findings, num_solutions=10, num_combinations=1, type_identifier=DEFAULT_TYPE_IDENTIFIER ):
+def run_bayesian( knowns, findings, num_solutions=10, num_combinations=1, type_identifier=DEFAULT_TYPE_IDENTIFIER, regions=EXPLANATION_REGIONS ):
     """ Simple Naive Bayes approach.
 
     Probably an oversimplification, but the basic Naive Bayes strategy is to just multiply all the conditionals and
@@ -268,9 +271,8 @@ def run_bayesian( knowns, findings, num_solutions=10, num_combinations=1, type_i
     """
 
     t1 = time.time()
-    explanations_list = fetch_exp_for_findings(type_identifier,findings)
-    if len(explanations_list) == 0:
-        raise AlgoError('Database query for explanations of type {} with findings in {} turned up empty!'.format(type_identifier,findings))
+    explanations_list = fetch_exp_for_findings(type_identifier,findings,regions)
+
     query_time = ( time.time() - t1 ) * 1000.0
 
     if num_solutions < len(explanations_list):

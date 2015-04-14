@@ -1,35 +1,60 @@
 {% extends "/admin/layout.html" %}
 
 {% block content %}
-	<div class="container" style='background:#FFF;'>
-		<div style='padding:16px;'>
-			<div class='row'>
-				<div class='span12'>
-					<div class='pull-right'>
-						<p class="pagination" style='margin:0;margin-right:32px;'>
-							{% if pagination.has_prev() %}
-								<a href="/admin?page={{pagination.prev_num}}">&lt; Previous page</a>
-							{% endif %}
-							{% if pagination.has_next() %}
-								<a href="/admin?page={{pagination.next_num}}">Next page &gt;</a>
-							{% endif %}
-						</p>
-					</div>
-					<h2>Browse Explanatory Variables</h2>
-				</div>
-				<div class='span12' id='edit'>
-					{% for explanation in pagination.items %}
-					<div style='padding:8px;'>
-						<div><a href='/admin/edit/{{explanation.mongo_id}}'>{{explanation.name}} ({{explanation.type_identifier}})</a></div>
-						<div>
-						{% for finding in explanation.findings %}
-							{{ finding.name }}[{{finding.weight}}],
-						{% endfor %}
-						</div>
-					</div>
-					{% endfor %}
-				</div>
-			</div>
-		</div>
+<script type='text/javascript'>
+    $( function() {
+	$( "#jumpto" ).autocomplete({
+	    source: '/api/explanation/autocomplete',
+	    select: function(event, ui) {
+		var pagename = '/admin/jumpto/explanation?name=' 
+		    + encodeURIComponent(ui.item.label) 
+		    + '&page=' + encodeURIComponent( {{pagination.page}} );
+		window.location = pagename;
+	    }
+	});
+    });
+</script>
+<div class="container" style='background:#FFF;'>
+  <div style='padding:16px;'>
+    {% with error_messages = get_flashed_messages(category_filter=['error']) %}
+    {% if error_messages %}
+    <div class='alert alert-error'>
+      <h4 class='alert-heading'>Error!</h4>
+      {% for message in error_messages %}
+      <div>{{message}}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+    <div class='row'>
+      <div class='span12'>
+	<div class='pull-right'>
+	  <p class="pagination" style='margin:0;margin-right:32px;'>
+	    {% if pagination.has_prev() %}
+	    <a href="/admin?page={{pagination.prev_num}}">&lt; Previous page</a>
+	    {% endif %}
+	    {% if pagination.has_prev() or pagination.has_next() %}
+	    <a><input type='text' tabindex='3' class='span3' id='jumpto' placeholder='Jump To'></a>
+	    {% endif %}
+	    {% if pagination.has_next() %}
+	    <a href="/admin?page={{pagination.next_num}}">Next page &gt;</a>
+	    {% endif %}
+	  </p>
 	</div>
+	<h2>Explanatory Variables <weak>({{pagination.page}} of {{pagination.pages}})</h2>
+      </div>
+      <div class='span11' id='edit'>
+	<dl>
+	{% for explanation in pagination.items %}
+	<dt><h4><a href='/admin/edit/{{explanation.mongo_id}}'>{{explanation.name}} ({{explanation.type_identifier}})</a></h4></dt>
+	{% if explanation.regions %}
+	<dd><strong>Regions: </strong>{{explanation.regions|join(', ')}}</dd>
+	{% endif %}
+	<dd><strong>Findings: </strong>{{explanation.findings|format_findings}}</dd>
+	</dl>
+	{% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

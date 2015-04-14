@@ -16,7 +16,7 @@
   };
 
   Diagnosis.get_diagnosis = function() {
-    var params;
+    var item, params, regions_enabled;
     if ($('#loading-indicator').is(":visible")) {
       window.diagnosis_refresh = true;
       return;
@@ -34,11 +34,22 @@
         marginTop: '+=109'
       }, 500, null);
     }
+    regions_enabled = (function() {
+      var i, len, ref, results;
+      ref = $("#region-checkboxes input:checked");
+      results = [];
+      for (i = 0, len = ref.length; i < len; i++) {
+        item = ref[i];
+        results.push(item.id);
+      }
+      return results;
+    })();
     params = {
       findings: window.symptoms.join(','),
       num_solutions: $('#num_solutions').val(),
       num_combinations: $('#num_combinations').val(),
       type_identifier: $('#type_identifier').val(),
+      regions: regions_enabled.join(','),
       algorithm: $('#algorithm').val()
     };
     $.getJSON('/diagnosis_result', params, function(data) {
@@ -82,11 +93,14 @@
     window.type_identifier.onchange = function() {
       return Diagnosis.get_diagnosis();
     };
+    $("input:checkbox").on("change", function() {
+      return Diagnosis.get_diagnosis();
+    });
     $(document).on('click', '.rm', function() {
-      var id;
-      id = $(this).data('sid');
-      if (window.symptoms.indexOf(id) !== -1) {
-        window.symptoms.splice(window.symptoms.indexOf(id), 1);
+      var sid;
+      sid = $(this).data('sid');
+      if (window.symptoms.indexOf(sid) !== -1) {
+        window.symptoms.splice(window.symptoms.indexOf(sid), 1);
         Diagnosis.get_diagnosis();
         return $(this.parentNode).fadeOut('fast', function() {
           $(this).remove();
@@ -102,7 +116,7 @@
         ui.item.value = '';
         $('#symptoms-list > .help-text').remove();
         $('#symptoms-list').append('<span class="label"><span>' + ui.item.label + '</span><span data-sid="' + ui.item.id + '" class="rm">x</span></span>');
-        window.symptoms.push(ui.item.label);
+        window.symptoms.push(ui.item.id);
         return Diagnosis.get_diagnosis();
       }
     });

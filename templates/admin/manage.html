@@ -4,6 +4,10 @@
 	<div class="container" style='background:#FFF;padding:16px;'>
 		<div class='row'>
 			<div class='span12'>
+				<div style='margin-bottom:32px;'>
+					<a href='/admin/delete_all' class='btn btn-danger pull-left' method='POST'>Clear Entire Database!!!</a>
+					<a href='/admin/csv_download' class='btn btn-primary pull-right'>Download Editable CSV</a>
+				</div>
 				{% with error_messages = get_flashed_messages(category_filter=['delete']) %}
 				{% if error_messages %}
 					<div class='alert alert-error'>
@@ -31,20 +35,25 @@
 					</div>
 				{% endif %}
 				{% endwith %}
-				<div style='margin-bottom:32px;'>
-					<a href='/admin/csv_download' class='btn btn-primary'>Download Editable CSV</a>
-					<a href='/admin/delete_all' class='btn btn-primary' method='POST'>Clear Entire Database!!!</a>
-					<!-- <button action='submit' type='submit' class='btn btn-primary'></button> -->
-					<!-- <form action='/admin/delete_all' method='POST'> -->
-					<!-- </form> -->
-				</div>
-				<form class='form-vertical well' action='/admin/csv_upload' method='POST' enctype='multipart/form-data'>
-					<input type='file' name='file' class='span3'>
-					<span class='help-block'>
-						The CSV file will be validated before any changes to the database are made
-					</span>
-					<button type='submit' class='btn btn-primary'>Upload!</button>
+				<form class='form-vertical well' action='/admin/gdata_sync' method='POST' enctype='multipart/form-data'>
+				  <fieldset>
+				    <legend>Sync from google sheets</legend>
+				    <label><input class="form-control" placeholder="Google Data Username" name="username" type="username" autofocus=""></label>
+				    <label><input class="form-control" placeholder="Password" name="password" type="password" value=""></label>
+				    <label><button type="submit" class='btn btn-primary'>Submit!</button></label>
+				  </fieldset>
 				</form>
+
+				<!-- I commented out the CSV file uploading mechanism because it is out of date.  Does not handle geo data which takes it -->
+				<!-- out of the short term running, and for the long term it should really be set up to merge instead of overwrite.  -Rishi. -->
+				<!-- <form class='form-vertical well' action='/admin/csv_upload' method='POST' enctype='multipart/form-data'> -->
+				<!--   <fieldset> -->
+				<!--     <legend>Upload CSV File</legend> -->
+				<!--     <label><input type='file' name='file' class='span3'></label> -->
+				<!--     <label><button type='submit' class='btn btn-primary'>Upload!</button></label> -->
+				<!--   </fieldset> -->
+				<!-- </form> -->
+
 			</div>
 		</div>
 		<div class='row'>

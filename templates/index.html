@@ -14,101 +14,113 @@
 </head>
 
 <body>
-	<div id='banner-bar'>
-		<div class="content">
-			<div class="container">
-				<div class="row" style='padding:16px;'>
-					<div class='span3' style='padding-top:8px;'>
-						<div id='logo'>Doknosis</div>
-						<div>
-							<a href='http://dhlab.org'><img src='/static/img/dhlab-logo.png' width='96px'></a>
-						</div>
-					</div>
-					<div class="span8">
-						<div style='float:right;'>
-							<!-- <button onclick='Diagnosis.get_diagnosis()' tabindex='2' type='submit' class='btn'>Diagnose</button> -->
-							<button onclick='Diagnosis.clear_all()' tabindex='3' type='submit' class='btn'>Start Over</button>
-						</div>
-						<div class='clearfix'>
-							<div class='input'>
-								<input type='text' size='90' tabindex='1' class='input-xlarge' id='symptoms' placeholder='Type Symptoms Here'>
-							</div>
-						</div>
-						<div id='symptoms-list'>
-							<div class='help-text'>No Symptoms Entered</div>
-						</div>
-					</div>
-					<div>
-						<h3>Advanced Options</h3>
-						<div id='advanced_options'>
-							<div>
-								<label for='num_solutions'>Solutions</label>
-								<select id="num_solutions">
-									<option value="10">10</option>
-									<option value="1">1</option>
-									<option value="5">5</option>
-									<option value="20">20</option>
-								</select>
-							</div>
-							<div>
-								<label>Disease Combinations</label>
-								<select id="num_combinations">
-									<option value="1">1</option>
-									<option value="2">2</option>
-								</select>
-							</div>
-							<div>
-								<label>Algorithm</label>
-								<select id="algorithm" class="drop_down">
-									<option value="1">Hybrid 1</option>
-									<option value="2">Hybrid 2</option>
-									<option value="3">Bayesian</option>
-								</select>
-							</div>
-							<div>
-								<label>Explanatory Variable Type</label>
-								<select id="type_identifier" class="drop_down">
-									<option value="Disease">Diseases</option>
-									<option value="Drug">Drugs</option>
-									<option value="All">All</option>
-								</select>
-							</div>
-						</div>
-						<div>
-							<div id='query-time' style='color:#AAA;font-size:10px;'></div>
-						</div>
-					</div>
-				</div>
-			</div>
+  <div id='banner-bar'>
+    <div class="content">
+      <div class="container">
+	<div class="row" style='padding:16px;'>
+	  <div class='span3' style='padding-top:8px;'>
+	    <div id='logo'>Doknosis</div>
+	    <div>
+	      <a href='http://dhlab.org'><img src='/static/img/dhlab-logo.png' width='96px'></a>
+	    </div>
+	  </div>
+	  <div class="span8">
+	    <div style='float:right;'>
+	      <!-- <button onclick='Diagnosis.get_diagnosis()' tabindex='2' type='submit' class='btn'>Diagnose</button> -->
+	      <button onclick='Diagnosis.clear_all()' tabindex='3' type='submit' class='btn'>Start Over</button>
+	    </div>
+	    <div class='clearfix'>
+	      <div class='input'>
+		<input type='text' size='90' tabindex='1' class='input-xlarge' id='symptoms' placeholder='Type Symptoms Here'>
+	      </div>
+	    </div>
+	    <div id='symptoms-list'>
+	      <div class='help-text'>No Symptoms Entered</div>
+	    </div>
+	  </div>
+	  <h3>Advanced Options</h3>
+	  <div id='advanced_options'>
+	    <div class="row">
+	      <div class="control-group">
+		<div class="controls">
+		  <div class="span7" id="region-checkboxes">
+		    {% for one_region in all_regions %}
+		      <input type="checkbox" id="{{one_region}}" label="{{one_region}}" checked>
+		      {{one_region}}
+		    {% endfor %}
+		  </div>
 		</div>
-		<div class='container' style='margin-top:8px;color:#999;'>
-			<div style='padding: 0 16px;'>
-				A powerful differential diagnosis engine developed by doctors, for doctors.
-			</div>
-			<div id='loading-indicator'>
-				<div class='indicator-wrapper'>
-					<div><img src='static/img/loading.gif'></div>
-					<div style='margin-top:16px;'>Retrieving Diagnosis...</div>
-				</div>
-			</div>
-			{% with error_messages = get_flashed_messages(category_filter=['error']) %}
-			{% if error_messages %}
-			<div class='alert alert-error'>
-			  <h4 class='alert-heading'>Errors trying to run diagnostic algorithm!</h4>
-			  {% for message in error_messages %}
-			  <div>{{message}}</div>
-			  {% endfor %}
-			</div>
-			{% endif %}
-			{% endwith %}
-			<div class='row'>
-				<div id='results' class='span12'>
-					<div style='padding:16px;'>
-						<div id='results-list'></div>
-					</div>
-				</div>
-			</div>
-		</div>
+	      </div>
+	    </div>
+	    <div>
+	      <label for='num_solutions'>Solutions</label>
+	      <select id="num_solutions">
+		<option value="10">10</option>
+		<option value="1">1</option>
+		<option value="5">5</option>
+		<option value="20">20</option>
+	      </select>
+	    </div>
+	    <div>
+	      <label>Disease Combinations</label>
+	      <select id="num_combinations">
+		<option value="1">1</option>
+		<option value="2">2</option>
+	      </select>
+	    </div>
+	    <div>
+	      <label>Algorithm</label>
+	      <select id="algorithm" class="drop_down">
+		{% for algo in all_algos %}
+		<option value="{{algo}}">{{algo}}</option>
+		{% endfor %}
+	      </select>
+	    </div>
+	    <div>
+	      <label>Explanatory Variable Type</label>
+	      <select id="type_identifier" class="drop_down">
+		{% for type_category in type_categories %}
+		<option value="{{type_category}}">{{type_category}}</option>
+		{% endfor %}
+	      </select>
+	    </div>
+	    <div>
+	      <div id='query-time' style='color:#AAA;font-size:10px;'></div>
+	    </div>
+	  </div>
 	</div>
+      </div>
+    </div> <!-- End of the input container -->
+
+    <div class='container' style='margin-top:8px;color:#999;'>
+      <div style='padding: 0 16px;'>
+	A powerful differential diagnosis engine developed by doctors, for doctors.
+      </div>
+      <div id='loading-indicator'>
+	<div class='indicator-wrapper'>
+	  <div><img src='static/img/loading.gif'></div>
+	  <div style='margin-top:16px;'>Retrieving Diagnosis...</div>
+	</div>
+      </div>
+      {% with error_messages = get_flashed_messages(category_filter=['error']) %}
+      {% if error_messages %}
+      <div class='alert alert-error'>
+	<h4 class='alert-heading'>Errors trying to run diagnostic algorithm!</h4>
+	{% for message in error_messages %}
+	<div>{{message}}</div>
+	{% endfor %}
+      </div>
+      {% endif %}
+      {% endwith %}
+      <div class='row'>
+	<div id='results' class='span12'>
+	  <div style='padding:16px;'>
+	    <div id='results-list'></div>
+	  </div>
+	</div>
+      </div>
+    </div> <!-- End of the output container -->
+
+  </div> <!-- End of the banner-bar -->
 </body>
 </html>
