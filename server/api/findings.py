@@ -58,7 +58,7 @@ def finding_autocomplete():
         return json.dumps( [] )
 
     # Query the database for matching strings
-    findings = Finding.query.filter( {'name': { '$regex': '%s' % (term) } } )\
+    findings = Finding.query.filter( {'name': { '$regex': '%s' % (term),'$options' : 'i' } } )\
                 .ascending( Finding.name )\
                 .all()
 
