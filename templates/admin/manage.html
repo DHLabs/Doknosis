@@ -46,13 +46,13 @@
 
 				<!-- I commented out the CSV file uploading mechanism because it is out of date.  Does not handle geo data which takes it -->
 				<!-- out of the short term running, and for the long term it should really be set up to merge instead of overwrite.  -Rishi. -->
-				<!-- <form class='form-vertical well' action='/admin/csv_upload' method='POST' enctype='multipart/form-data'> -->
-				<!--   <fieldset> -->
-				<!--     <legend>Upload CSV File</legend> -->
-				<!--     <label><input type='file' name='file' class='span3'></label> -->
-				<!--     <label><button type='submit' class='btn btn-primary'>Upload!</button></label> -->
-				<!--   </fieldset> -->
-				<!-- </form> -->
+				<form class='form-vertical well' action='/admin/csv_upload' method='POST' enctype='multipart/form-data'>
+				  <fieldset>
+				    <legend>Upload CSV File</legend>
+				    <label><input type='file' name='file' class='span3'></label>
+				    <label><button type='submit' class='btn btn-primary'>Upload!</button></label>
+				  </fieldset>
+				</form>
 
 			</div>
 		</div>
