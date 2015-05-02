@@ -33,7 +33,7 @@ def fetch_exp_for_findings(type_identifier,findings,regions=EXPLANATION_REGIONS)
     filtered_list = filter(ffunc,explanations_list)
 
     # Weed out any explanations which do not have overlapping regions with target
-    ffunc = lambda expl: (len(expl.regions) == 0) or (len(set(expl.regions).intersection(set(regions))) > 0)
+    ffunc = lambda expl: (not hasattr(expl,'regions')) or (len(expl.regions) == 0) or (len(set(expl.regions).intersection(set(regions))) > 0)
     filtered_list = filter(ffunc,filtered_list)
 
     if len(filtered_list) == 0:
