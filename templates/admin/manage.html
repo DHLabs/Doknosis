@@ -5,7 +5,7 @@
 		<div class='row'>
 			<div class='span12'>
 				<div style='margin-bottom:32px;'>
-					<a href='/admin/delete_all' class='btn btn-danger pull-left' method='POST'>Clear Entire Database!!!</a>
+					<!-- <a href='/admin/delete_all' class='btn btn-danger pull-left' method='POST'>Clear Entire Database!!!</a> -->
 					<a href='/admin/csv_download' class='btn btn-primary pull-right'>Download Editable CSV</a>
 				</div>
 				{% with error_messages = get_flashed_messages(category_filter=['delete']) %}
@@ -28,7 +28,7 @@
 				{% with error_messages = get_flashed_messages(category_filter=['error']) %}
 				{% if error_messages %}
 					<div class='alert alert-error'>
-						<h4 class='alert-heading'>We had some problems parsing your CSV file (any entries not represented below were successfully updated)!</h4>
+						<h4 class='alert-heading'>We had some problems loading data!</h4>
 						{% for message in error_messages %}
 							<div>{{message}}</div>
 						{% endfor %}

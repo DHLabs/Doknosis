@@ -2,7 +2,7 @@ from gdata.spreadsheet.service import SpreadsheetsService,DocumentQuery,CellQuer
 from gdata.spreadsheet import SpreadsheetsCellsFeed
 import time,re
 
-GDATA_MAIN_DOC = 'Doknosis 0.2'
+GDATA_MAIN_DOC = 'Doknosis'
 GDATA_SOURCE = 'doknosis.GDSpreadsheet'
 GDATA_WS_PREVALENCE = 'Drugs and Diseases Updated'
 GDATA_WS_GEO = 'Geo'

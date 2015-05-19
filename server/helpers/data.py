@@ -180,7 +180,9 @@ def parse_gdata( gd_prev, gd_geo ):
                 continue
             
             if name not in update_explanations:
-                errors.append(error_prefix+'This explanation does not match any in prevalence data!  Skipping!'.format(name))
+                # If all regions are set, I think we can just ignore this guy because this is the default behavior.
+                if len(all_regions_set - set(regions)) != 0:
+                    errors.append(error_prefix+'This explanation does not match any in prevalence data!  Skipping!'.format(name))
                 continue
 
             # Prepend subtype to disease.

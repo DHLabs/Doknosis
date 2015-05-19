@@ -145,14 +145,23 @@ def gdata_sync():
     update_time = ( time.time() - t1 )
 
     if len( errors ) > 0:
-        flash('NO UPDATE!  The following errors encountered parsing google sheet (processing took {} seconds).'.format(upload_time),'error')
-        for err in errors:
+        flash('The following errors encountered parsing google sheet'
+              '(took {} seconds).  Errors logged to "sync_errors.log".'
+              .format(update_time),'error')
+        for err in errors[0:100]:
             flash(err,'error')
+        if len(errors) > 100:
+            flash('Only printing the first 100 out of {} errors.'.format(len(errors)),'error')
+        with open('sync_errors.log','w') as fh:
+            fh.write('The following errors encountered parsing google sheet.\n')
+            for err in errors:
+                fh.write(err+'\n')
+
     else:
         Explanation.remove_all()
         Finding.remove_all()
         Explanation.bulk_upsert(update_explanations.values())
-        flash( 'Google sheet parsed successfully (processing took {} seconds)!  Database reloaded.'.format(update_time), 'success' )    
+        flash( 'Google sheet parsed successfully (processing took {} seconds)!  Database reloaded.'.format(update_time), 'success' )
 
     return redirect( '/admin/manage' )
 
@@ -330,7 +339,7 @@ def edit_explanation( explanation_id ):
     return render_template( 'edit.html', explanation=explanation )
 
 
-@admin_api.route( '/delete_all', methods=[ 'GET' ])
+# @admin_api.route( '/delete_all', methods=[ 'GET' ])
 def delete_all():
     '''
         Clear out the entire database.
